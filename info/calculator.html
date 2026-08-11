@@ -1,0 +1,113 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Water Load Calculator — Titan Energy</title>
+<style>
+:root{--bg:#0a0e1a;--card:#141b2e;--card2:#1c2542;--text:#eef2fa;--dim:#8fa0bd;--cyan:#31c0f7;--green:#3ecf8e;--red:#e03131;--line:#243050;}
+@media(prefers-color-scheme:light){:root{--bg:#edf0f7;--card:#fff;--card2:#e7ebf5;--text:#141a28;--dim:#5a6682;--line:#d3daea;}}
+*{box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:16px;line-height:1.5;}
+.wrap{max-width:560px;margin:0 auto;}
+h1{font-size:20px;margin:8px 0 2px;} .accent{color:var(--cyan);}
+a.back{color:var(--cyan);text-decoration:none;font-weight:700;font-size:14px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0;}
+label{display:block;font-size:13px;font-weight:700;color:var(--dim);margin:12px 0 5px;text-transform:uppercase;letter-spacing:.4px;}
+.row{display:flex;gap:10px;}
+.field{flex:1;position:relative;}
+.field span{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--dim);font-weight:700;font-size:14px;pointer-events:none;}
+input[type=number]{width:100%;font-size:20px;padding:12px 34px 12px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card2);color:var(--text);outline:none;}
+input[type=number]:focus{border-color:var(--cyan);}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+.chip{padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--card2);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;user-select:none;}
+.chip.on{background:var(--cyan);border-color:var(--cyan);color:#04121f;}
+#verdict{border-radius:14px;padding:16px;margin:14px 0;font-size:16px;font-weight:700;text-align:center;display:none;}
+#verdict.ok{display:block;background:rgba(62,207,142,.15);border:2px solid var(--green);color:var(--green);}
+#verdict.no{display:block;background:rgba(224,49,49,.13);border:2px solid var(--red);color:#ff8a8a;}
+#verdict small{display:block;font-weight:600;font-size:13px;margin-top:6px;color:var(--dim);}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.stat{background:var(--card2);border-radius:10px;padding:10px 12px;}
+.stat .v{font-size:19px;font-weight:800;color:var(--cyan);} .stat .l{font-size:11.5px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
+.hint{font-size:12.5px;color:var(--dim);margin-top:10px;}
+</style></head>
+<body><div class="wrap">
+<p><a class="back" href="../index.html">&larr; Back to route lookup</a></p>
+<h1><span class="accent">Water Load</span> Calculator</h1>
+<p style="font-size:14px;color:var(--dim);margin:4px 0 0;">1&quot; = 1.67 bbls &nbsp;&middot;&nbsp; 1&apos; = 20 bbls</p>
+
+<div class="card">
+<label>Interface level (top of water)</label>
+<div class="row">
+  <div class="field"><input type="number" id="int_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
+  <div class="field"><input type="number" id="int_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
+</div>
+<label>Top level (top of oil) — optional</label>
+<div class="row">
+  <div class="field"><input type="number" id="top_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
+  <div class="field"><input type="number" id="top_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
+</div>
+<label>Tank buffer (must stay in tank)</label>
+<div class="field"><input type="number" id="buf" min="0" inputmode="decimal" placeholder="30"><span>in</span></div>
+<div class="chips" id="bufchips">
+  <div class="chip" data-v="30">Gulfport 30&quot;</div><div class="chip" data-v="40">Gulfport 40&quot;</div>
+  <div class="chip" data-v="36">EOG 36&quot;</div><div class="chip" data-v="72">Ascent 72&quot;</div>
+</div>
+<label>Load size</label>
+<div class="field"><input type="number" id="load" min="0" inputmode="decimal" placeholder="130"><span>bbl</span></div>
+<div class="chips" id="loadchips">
+  <div class="chip" data-v="60">60</div><div class="chip" data-v="110">110</div><div class="chip" data-v="120">120</div>
+  <div class="chip" data-v="130">130</div><div class="chip" data-v="150">150</div>
+</div>
+</div>
+
+<div id="verdict"></div>
+<div class="card" id="statsCard" style="display:none">
+  <div class="stats">
+    <div class="stat"><div class="v" id="s_usable">–</div><div class="l">Water above buffer</div></div>
+    <div class="stat"><div class="v" id="s_bbls">–</div><div class="l">Available bbls</div></div>
+    <div class="stat"><div class="v" id="s_need">–</div><div class="l">Min interface for load</div></div>
+    <div class="stat"><div class="v" id="s_oil">–</div><div class="l">Oil on top</div></div>
+  </div>
+  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch.</div>
+</div>
+
+<script>
+const BBL_PER_IN = 1.67;
+const $ = id => document.getElementById(id);
+function inches(ft, inch){ return (parseFloat(ft)||0)*12 + (parseFloat(inch)||0); }
+function fmtFtIn(totIn){ if(totIn===null) return "–"; const f=Math.floor(totIn/12), i=Math.round((totIn-f*12)*10)/10; return (f? f+"' ":"") + i + '"'; }
+function calc(){
+  const intf = inches($('int_ft').value, $('int_in').value);
+  const top  = inches($('top_ft').value, $('top_in').value);
+  const buf  = parseFloat($('buf').value);
+  const load = parseFloat($('load').value);
+  const v = $('verdict'), sc = $('statsCard');
+  if(!intf || isNaN(buf)){ v.className=''; sc.style.display='none'; return; }
+  const usable = intf - buf;
+  const bbls = Math.max(0, usable) * BBL_PER_IN;
+  sc.style.display='block';
+  $('s_usable').textContent = usable >= 0 ? fmtFtIn(usable) : '0"';
+  $('s_bbls').textContent = Math.floor(bbls) + " bbl";
+  $('s_need').textContent = (!isNaN(load) && load>0) ? fmtFtIn(buf + load/BBL_PER_IN) : "–";
+  $('s_oil').textContent = top > intf ? fmtFtIn(top - intf) : (top>0 ? 'check gauges' : '–');
+  if(isNaN(load) || load<=0){ v.className=''; return; }
+  if(bbls >= load){
+    v.className='ok';
+    v.innerHTML = '&#9989; ENOUGH WATER — full ' + load + ' bbl load OK<small>' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer</small>';
+  } else {
+    v.className='no';
+    v.innerHTML = '&#10060; NOT ENOUGH for ' + load + ' bbl<small>Only ' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer &mdash; interface needs to be at ' + fmtFtIn(buf + load/BBL_PER_IN) + ' or higher for a full load</small>';
+  }
+}
+document.querySelectorAll('input').forEach(i=>i.addEventListener('input', calc));
+function chipRow(rowId, inputId){
+  $(rowId).addEventListener('click', e=>{
+    const c=e.target.closest('.chip'); if(!c) return;
+    document.querySelectorAll('#'+rowId+' .chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); $(inputId).value=c.dataset.v; calc();
+  });
+}
+chipRow('bufchips','buf'); chipRow('loadchips','load');
+// prefill from ?buffer=30&load=130
+const p = new URLSearchParams(location.search);
+if(p.get('buffer')){ $('buf').value = p.get('buffer'); }
+if(p.get('load')){ $('load').value = p.get('load'); }
+calc();
+</script>
+</div></body></html>
