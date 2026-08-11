@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Weather & Lightning — Titan Energy</title>
+<style>
+:root{--bg:#0a0e1a;--card:#141b2e;--card2:#1c2542;--text:#eef2fa;--dim:#8fa0bd;--cyan:#31c0f7;--green:#3ecf8e;--red:#e03131;--amber:#f5a623;--line:#243050;}
+@media(prefers-color-scheme:light){:root{--bg:#edf0f7;--card:#fff;--card2:#e7ebf5;--text:#141a28;--dim:#5a6682;--line:#d3daea;}}
+*{box-sizing:border-box;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);margin:0;padding:16px;line-height:1.5;}
+.wrap{max-width:560px;margin:0 auto;}
+h1{font-size:20px;margin:8px 0 2px;} .accent{color:var(--amber);}
+h2{font-size:15px;color:var(--dim);text-transform:uppercase;letter-spacing:.5px;margin:22px 0 8px;}
+a.back{color:var(--cyan);text-decoration:none;font-weight:700;font-size:14px;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:12px 0;}
+.rule{border-left:4px solid var(--amber);font-size:14px;color:var(--dim);}
+.rule b{color:var(--text);}
+#timerZone{text-align:center;border-radius:16px;padding:22px 16px;margin:12px 0;border:2px solid var(--line);background:var(--card);}
+#timerZone.active{border-color:var(--red);background:rgba(224,49,49,.12);}
+#timerZone.clear{border-color:var(--green);background:rgba(62,207,142,.12);}
+#tstate{font-size:19px;font-weight:900;letter-spacing:.6px;}
+#timerZone.active #tstate{color:#ff8a8a;} #timerZone.clear #tstate{color:var(--green);}
+#tclock{font-size:52px;font-weight:900;font-variant-numeric:tabular-nums;margin:6px 0;}
+#timerZone.active #tclock{color:#ff8a8a;}
+#tsub{font-size:13px;color:var(--dim);margin-bottom:14px;}
+.strikebtn{display:block;width:100%;padding:17px;border-radius:14px;border:none;font-size:17px;font-weight:900;cursor:pointer;
+  background:linear-gradient(180deg,#ffb02e,#e08700);color:#241500;box-shadow:0 3px 14px rgba(245,166,35,.4);}
+.stopbtn{margin-top:10px;background:none;border:1px solid var(--line);color:var(--dim);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+#alerts .alert{border-left:4px solid var(--red);background:rgba(224,49,49,.12);border-radius:10px;padding:12px;margin:8px 0;font-size:14px;}
+#alerts .alert b{color:#ff8a8a;display:block;margin-bottom:3px;}
+#alerts .none{color:var(--green);font-weight:700;font-size:14px;}
+#alerts .dim{color:var(--dim);font-size:13px;}
+iframe{width:100%;height:420px;border:none;border-radius:14px;background:var(--card2);}
+a.card{display:block;color:var(--text);text-decoration:none;font-weight:700;font-size:15px;}
+a.card span{color:var(--dim);font-weight:400;font-size:13px;display:block;margin-top:2px;}
+.locbtn{background:var(--card2);border:1px solid var(--line);color:var(--cyan);border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;}
+
+.thdr{display:flex;align-items:center;gap:10px;background:linear-gradient(160deg,#05070e 0%,#0d1631 55%,#12295e 100%);
+      border-bottom:2px solid #31c0f7;border-radius:14px;padding:12px 14px;margin-bottom:16px;}
+.thdr .w1{font-family:Georgia,'Times New Roman',serif;font-weight:800;font-size:20px;letter-spacing:2.5px;
+      background:linear-gradient(180deg,#e8edf5 0%,#9fc4ff 45%,#31c0f7 100%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.thdr .w1 .i{background:linear-gradient(180deg,#ff6b6b,#c81e1e);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.thdr .w2{font-size:8.5px;font-weight:700;letter-spacing:2.6px;color:#7fb6f0;margin-top:2px;}
+.thdr a.hback{margin-left:auto;color:#31c0f7;text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;}
+</style></head>
+<body><div class="wrap">
+<div class="thdr">
+<svg width="30" height="37" viewBox="0 0 100 125" aria-hidden="true"><defs>
+<linearGradient id="hh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0d12"/><stop offset=".5" stop-color="#1b2f8f"/><stop offset="1" stop-color="#2aa7ee"/></linearGradient>
+<linearGradient id="hc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a5a"/><stop offset="1" stop-color="#b31212"/></linearGradient></defs>
+<path d="M50 2 L62 17 L50 36 L38 17 Z" fill="url(#hc)" stroke="#d9e0ea" stroke-width="2.5"/>
+<path d="M50 27 C27 27 17 44 17 63 L17 92 L30 83 L33 112 L44 99 L44 76 C38 72 34 66 34 59 L44 64 L56 64 L66 59 C66 66 62 72 56 76 L56 99 L67 112 L70 83 L83 92 L83 63 C83 44 73 27 50 27 Z" fill="url(#hh)" stroke="#d9e0ea" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M36 54 L46 58 L46 63 L36 58 Z" fill="#35c6f7"/><path d="M64 54 L54 58 L54 63 L64 58 Z" fill="#35c6f7"/>
+<path d="M46 66 L54 66 L52 82 L48 82 Z" fill="#0d1220" stroke="#d9e0ea" stroke-width="1.5"/></svg>
+<div><div class="w1">T<span class="i">I</span>TAN</div><div class="w2">ENERGY TRANSPORTATION</div></div>
+<a class="hback" href="../index.html">&larr; Routes</a>
+</div>
+<h1><span class="accent">&#9889; Weather</span> &amp; Lightning</h1>
+
+<div class="card rule"><b>Stop Work Authority — lightning rule:</b> if lightning is within <b>10 miles</b>, stop work. Do not resume until <b>30 minutes after the last visible strike</b>. You have the authority to stop — no one can override it.</div>
+
+<div id="timerZone">
+  <div id="tstate">LIGHTNING TIMER</div>
+  <div id="tclock">30:00</div>
+  <div id="tsub">Tap when you see a strike — tap again on every new strike to restart the 30 minutes.</div>
+  <button class="strikebtn" id="strike">&#9889; STRIKE SEEN — START / RESET 30:00</button>
+  <button class="stopbtn" id="treset" style="display:none">clear timer</button>
+</div>
+
+<h2>Active weather alerts — your location</h2>
+<div class="card" id="alerts"><span class="dim">Checking your location&hellip;</span><br><br>
+<button class="locbtn" id="locbtn" style="display:none">&#128205; Use my location</button></div>
+
+<h2>Live radar</h2>
+<iframe id="radar" loading="lazy"
+ src="https://embed.windy.com/embed2.html?lat=40.10&lon=-81.20&detailLat=40.10&detailLon=-81.20&zoom=8&level=surface&overlay=radar&product=radar&menu=&message=true&marker=&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1"></iframe>
+
+<h2>Live lightning maps</h2>
+<a class="card" href="https://map.blitzortung.org/#8/40.10/-81.20" target="_blank" rel="noopener">&#9889; Blitzortung live strike map &rarr;<span>Real-time community lightning detection — supplemental only, use your eyes and the 30-minute rule as the standard.</span></a>
+<a class="card" href="https://www.lightningmaps.org/" target="_blank" rel="noopener">&#127757; LightningMaps.org &rarr;<span>Alternative live strike map.</span></a>
+
+<p style="font-size:12.5px;color:var(--dim)">Alerts come from the National Weather Service for your GPS position. The timer runs on your phone and keeps counting if you close this page. When in doubt: stop work and call dispatch <a class="back" href="tel:+17404335399">(740) 433-5399</a>.</p>
+
+<script>
+// ===== 30-minute stop-work timer (persists via localStorage where available) =====
+const KEY='titan_lx_until';
+const zone=document.getElementById('timerZone'), clock=document.getElementById('tclock'),
+      state=document.getElementById('tstate'), sub=document.getElementById('tsub'),
+      resetBtn=document.getElementById('treset');
+let until=0;
+try{ until=parseInt(localStorage.getItem(KEY)||'0',10)||0; }catch(e){}
+function save(){ try{ if(until) localStorage.setItem(KEY,String(until)); else localStorage.removeItem(KEY);}catch(e){} }
+document.getElementById('strike').addEventListener('click',()=>{ until=Date.now()+30*60*1000; save(); tick(); });
+resetBtn.addEventListener('click',()=>{ until=0; save(); tick(); });
+function tick(){
+  const left=until-Date.now();
+  if(until && left>0){
+    zone.className='active';
+    state.textContent='\u26D4 STOP WORK \u2014 LIGHTNING';
+    const m=Math.floor(left/60000), s=Math.floor(left%60000/1000);
+    clock.textContent=m+':'+String(s).padStart(2,'0');
+    sub.textContent='Resume only when this reaches 0:00 with no new strikes.';
+    resetBtn.style.display='inline-block';
+  } else if(until){
+    zone.className='clear';
+    state.textContent='\u2705 30 MINUTES CLEAR';
+    clock.textContent='0:00';
+    sub.textContent='No strike logged in the last 30 minutes. Confirm the sky and resume per policy.';
+    resetBtn.style.display='inline-block';
+  } else {
+    zone.className=''; state.textContent='LIGHTNING TIMER'; clock.textContent='30:00';
+    sub.textContent='Tap when you see a strike \u2014 tap again on every new strike to restart the 30 minutes.';
+    resetBtn.style.display='none';
+  }
+}
+setInterval(tick,1000); tick();
+
+// ===== NWS alerts by geolocation =====
+const alertsEl=document.getElementById('alerts'), locbtn=document.getElementById('locbtn');
+function showAlerts(feats, placeNote){
+  if(!feats.length){ alertsEl.innerHTML='<span class="none">\u2705 No active alerts'+placeNote+'</span>'; return; }
+  alertsEl.innerHTML=feats.map(f=>{
+    const p=f.properties;
+    return '<div class="alert"><b>'+p.event+'</b>'+(p.headline||'')+'<div style="margin-top:4px;font-size:12.5px;opacity:.8">'+(p.instruction? p.instruction.split('\n')[0] : '')+'</div></div>';
+  }).join('');
+}
+function loadAlerts(lat,lon){
+  alertsEl.innerHTML='<span class="dim">Loading alerts\u2026</span>';
+  fetch('https://api.weather.gov/alerts/active?point='+lat.toFixed(4)+','+lon.toFixed(4))
+    .then(r=>r.json())
+    .then(d=>showAlerts((d.features||[]), ' at your location'))
+    .catch(()=>{ alertsEl.innerHTML='<span class="dim">Could not load alerts \u2014 check signal, or see the radar below.</span>'; });
+}
+function askLoc(){
+  if(!navigator.geolocation){ alertsEl.innerHTML='<span class="dim">Location not available on this phone \u2014 use the radar below.</span>'; return; }
+  navigator.geolocation.getCurrentPosition(
+    pos=>{ loadAlerts(pos.coords.latitude,pos.coords.longitude);
+      const r=document.getElementById('radar');
+      const la=pos.coords.latitude.toFixed(2), lo=pos.coords.longitude.toFixed(2);
+      r.src=r.src.replace(/lat=[-0-9.]+&lon=[-0-9.]+&detailLat=[-0-9.]+&detailLon=[-0-9.]+/,'lat='+la+'&lon='+lo+'&detailLat='+la+'&detailLon='+lo);
+    },
+    ()=>{ alertsEl.innerHTML='<span class="dim">Location denied \u2014 showing eastern Ohio.</span><br><br>'; locbtn.style.display='inline-block'; loadAlerts(40.10,-81.20); }
+  );
+}
+locbtn.addEventListener('click',askLoc);
+askLoc();
+</script>
+</div></body></html>
