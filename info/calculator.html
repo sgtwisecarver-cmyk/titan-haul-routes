@@ -66,6 +66,12 @@ input[type=number]:focus{border-color:var(--cyan);}
   <div class="chip" data-v="30">Gulfport 30&quot;</div><div class="chip" data-v="40">Gulfport 40&quot;</div>
   <div class="chip" data-v="36">EOG 36&quot;</div><div class="chip" data-v="72">Ascent 72&quot;</div>
 </div>
+<label>Tanks on site (equalized)</label>
+<div class="field"><input type="number" id="tanks" min="1" max="8" inputmode="numeric" value="1"><span>tanks</span></div>
+<div class="chips" id="tankchips">
+  <div class="chip on" data-v="1">1 tank</div><div class="chip" data-v="2">2</div>
+  <div class="chip" data-v="3">3 (EOG)</div><div class="chip" data-v="4">4</div>
+</div>
 <label>Load size</label>
 <div class="field"><input type="number" id="load" min="0" inputmode="decimal" placeholder="130"><span>bbl</span></div>
 <div class="chips" id="loadchips">
@@ -82,7 +88,7 @@ input[type=number]:focus{border-color:var(--cyan);}
     <div class="stat"><div class="v" id="s_need">–</div><div class="l">Min interface for load</div></div>
     <div class="stat"><div class="v" id="s_oil">–</div><div class="l">Oil on top</div></div>
   </div>
-  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch.</div>
+  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch <b>per tank</b>. Equalized tanks share one level &mdash; 3 equalized tanks give 5.01 bbls per inch. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
 </div>
 
 <script>
@@ -95,22 +101,24 @@ function calc(){
   const top  = inches($('top_ft').value, $('top_in').value);
   const buf  = parseFloat($('buf').value);
   const load = parseFloat($('load').value);
+  const tanks = Math.max(1, Math.min(8, parseInt($('tanks').value)||1));
+  const rate = BBL_PER_IN * tanks;
   const v = $('verdict'), sc = $('statsCard');
   if(!intf || isNaN(buf)){ v.className=''; sc.style.display='none'; return; }
   const usable = intf - buf;
-  const bbls = Math.max(0, usable) * BBL_PER_IN;
+  const bbls = Math.max(0, usable) * rate;
   sc.style.display='block';
   $('s_usable').textContent = usable >= 0 ? fmtFtIn(usable) : '0"';
   $('s_bbls').textContent = Math.floor(bbls) + " bbl";
-  $('s_need').textContent = (!isNaN(load) && load>0) ? fmtFtIn(buf + load/BBL_PER_IN) : "–";
+  $('s_need').textContent = (!isNaN(load) && load>0) ? fmtFtIn(buf + load/rate) : "–";
   $('s_oil').textContent = top > intf ? fmtFtIn(top - intf) : (top>0 ? 'check gauges' : '–');
   if(isNaN(load) || load<=0){ v.className=''; return; }
   if(bbls >= load){
     v.className='ok';
-    v.innerHTML = '&#9989; ENOUGH WATER — full ' + load + ' bbl load OK<small>' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer</small>';
+    v.innerHTML = '&#9989; ENOUGH WATER — full ' + load + ' bbl load OK<small>' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer' + (tanks>1 ? ' across ' + tanks + ' equalized tanks (' + rate.toFixed(2) + ' bbl per inch)' : '') + '</small>';
   } else {
     v.className='no';
-    v.innerHTML = '&#10060; NOT ENOUGH for ' + load + ' bbl<small>Only ' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer &mdash; interface needs to be at ' + fmtFtIn(buf + load/BBL_PER_IN) + ' or higher for a full load</small>';
+    v.innerHTML = '&#10060; NOT ENOUGH for ' + load + ' bbl<small>Only ' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer' + (tanks>1 ? ' across ' + tanks + ' equalized tanks' : '') + ' &mdash; interface needs to be at ' + fmtFtIn(buf + load/rate) + ' or higher for a full load</small>';
   }
 }
 document.querySelectorAll('input').forEach(i=>i.addEventListener('input', calc));
@@ -121,11 +129,12 @@ function chipRow(rowId, inputId){
     c.classList.add('on'); $(inputId).value=c.dataset.v; calc();
   });
 }
-chipRow('bufchips','buf'); chipRow('loadchips','load');
+chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks');
 // prefill from ?buffer=30&load=130
 const p = new URLSearchParams(location.search);
 if(p.get('buffer')){ $('buf').value = p.get('buffer'); }
 if(p.get('load')){ $('load').value = p.get('load'); }
+if(p.get('tanks')){ $('tanks').value = p.get('tanks'); }
 calc();
 </script>
 </div><script data-goatcounter="https://titanroutes.goatcounter.com/count"
