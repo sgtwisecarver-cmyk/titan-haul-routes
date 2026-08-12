@@ -49,11 +49,23 @@
      background:rgba(10,16,32,.72); color:#eef2fa; outline:none; transition:box-shadow .15s,border-color .15s;}
   #q::placeholder{color:#63779d;}
   #q:focus{border-color:var(--cyan); box-shadow:0 0 0 3px rgba(49,192,247,.22);}
-  .chips{display:flex; gap:8px; margin-top:10px; overflow-x:auto; padding-bottom:2px;}
-  .chip{flex:0 0 auto; padding:8px 15px; border-radius:999px; border:1px solid rgba(130,165,230,.35); background:rgba(14,22,44,.7);
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
+  .chip{flex:0 0 auto; padding:7px 13px; border-radius:999px; border:1px solid rgba(130,165,230,.35); background:rgba(14,22,44,.7);
         color:#9fb4d8; font-size:14px; font-weight:600; cursor:pointer; user-select:none; transition:all .12s;}
   .chip.on{background:linear-gradient(180deg,#37c5f9,#1e8ed8); border-color:transparent; color:#04121f; box-shadow:0 2px 8px rgba(49,192,247,.4);}
   #count{color:#6d84ad; font-size:12px; margin-top:8px;}
+
+  /* ===== dispatch ticker ===== */
+  #ticker{display:none; overflow:hidden; background:linear-gradient(180deg,#3a2a05,#241a02); border-bottom:2px solid #f5a623;
+          padding:8px 0; position:relative;}
+  :root.light #ticker{background:linear-gradient(180deg,#fff3d6,#ffe9b8);}
+  @media (prefers-color-scheme: light){ :root:not(.dark) #ticker{background:linear-gradient(180deg,#fff3d6,#ffe9b8);} }
+  #ticker.show{display:block;}
+  #tickText{display:inline-block; white-space:nowrap; font-weight:700; font-size:14.5px; color:#ffd479; padding-left:100%;
+            animation:tickmove var(--tickdur,22s) linear infinite;}
+  :root.light #tickText{color:#7a5200;}
+  @media (prefers-color-scheme: light){ :root:not(.dark) #tickText{color:#7a5200;} }
+  @keyframes tickmove{ 0%{transform:translateX(0);} 100%{transform:translateX(-100%);} }
 
   /* ===== list ===== */
   #list{padding:12px 12px 84px;}
@@ -146,6 +158,7 @@
   <div class="chips" id="chips"></div>
   <div id="count"></div>
 </header>
+<div id="ticker"><span id="tickText"></span></div>
 <div id="list"></div>
 <div id="toast"></div>
 <footer><a href="tel:+17404335399" style="color:#31c0f7;text-decoration:none;font-weight:700;">&#128222; Dispatch: (740) 433-5399</a><span style="opacity:.75"> &nbsp;&middot;&nbsp; verify route before first haul to a new pad</span></footer>
@@ -155,7 +168,7 @@ const VERSION = "v15.2 — Aug 2026";
 // version moved out of header; visible on About page via page source
 
 const SRC_ORDER = ["Ascent","EOG","Gulfport","Infinity","Expand","Disposal"];
-const SRC_LABEL = {EOG:"EOG / Encino"};
+const SRC_LABEL = {};
 (function buildChips(){
   const present = SRC_ORDER.filter(s => DATA.some(d=>d.src===s));
   const soon = ["Infinity","Expand"].filter(s=>!present.includes(s));
@@ -342,6 +355,40 @@ function openFromHash(){
 openFromHash();
 window.addEventListener('hashchange', openFromHash);
 if('serviceWorker' in navigator){ navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+// ===== dispatch ticker (from published Google Sheet) =====
+const TICKER_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ0eF7_bQ6Y1CeIN89ruzaNGtp6fNa-M_IF4yKMjjBnV8qY4OeFIEu88JH9PVeOHdxEENCJ1fA5XH7C/pub?gid=1977472595&single=true&output=csv";
+function showTicker(msg){
+  if(!msg) return;
+  const t=document.getElementById('ticker'), x=document.getElementById('tickText');
+  x.textContent = msg + "   \u2022   " + msg;
+  t.style.setProperty('--tickdur', Math.max(14, Math.round(msg.length/3.2)) + 's');
+  t.classList.add('show');
+}
+function parseCsvCell(text){
+  let line=(text||"").split(/\r?\n/)[0].trim();
+  if(line.startsWith('"')){
+    line=line.slice(1);
+    const end=line.lastIndexOf('"');
+    if(end>=0) line=line.slice(0,end);
+    line=line.replace(/""/g,'"');
+  } else {
+    line=line.split(',')[0];
+  }
+  return line.trim();
+}
+(function loadTicker(){
+  const cached=lsGet('titan_ticker',null);
+  fetch(TICKER_URL+'&cb='+Math.floor(Date.now()/60000), {cache:'no-store'})
+    .then(r=>r.ok?r.text():Promise.reject())
+    .then(t=>{
+      const msg=parseCsvCell(t);
+      lsSet('titan_ticker',{msg:msg,ts:Date.now()});
+      if(msg) showTicker(msg);
+    })
+    .catch(()=>{
+      if(cached && cached.msg && (Date.now()-cached.ts) < 7*24*3600*1000) showTicker(cached.msg);
+    });
+})();
 // ===== theme toggle =====
 const themeBtn=document.getElementById('themeBtn');
 const themeMeta=document.querySelector('meta[name="theme-color"]');
