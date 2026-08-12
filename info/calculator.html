@@ -50,15 +50,20 @@ input[type=number]:focus{border-color:var(--cyan);}
 <p style="font-size:14px;color:var(--dim);margin:4px 0 0;">1&quot; = 1.67 bbls &nbsp;&middot;&nbsp; 1&apos; = 20 bbls</p>
 
 <div class="card">
+<div id="singleTank">
 <label>Interface level (top of water)</label>
 <div class="row">
   <div class="field"><input type="number" id="int_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
   <div class="field"><input type="number" id="int_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
 </div>
+</div>
+<div id="multiTank" style="display:none"></div>
+<div id="topSection">
 <label>Top level (top of oil) — optional</label>
 <div class="row">
   <div class="field"><input type="number" id="top_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
   <div class="field"><input type="number" id="top_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
+</div>
 </div>
 <label>Tank buffer (must stay in tank)</label>
 <div class="field"><input type="number" id="buf" min="0" inputmode="decimal" placeholder="30"><span>in</span></div>
@@ -88,7 +93,7 @@ input[type=number]:focus{border-color:var(--cyan);}
     <div class="stat"><div class="v" id="s_need">–</div><div class="l">Min interface for load</div></div>
     <div class="stat"><div class="v" id="s_oil">–</div><div class="l">Oil on top</div></div>
   </div>
-  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch <b>per tank</b>. Equalized tanks share one level &mdash; 3 equalized tanks give 5.01 bbls per inch. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
+  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch <b>per tank</b>. Equalized tanks are connected, but oil sitting on top pushes that tank's water interface DOWN &mdash; so gauge every tank and the calculator uses the LOWEST one, since it reaches the buffer first. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
 </div>
 
 <script>
@@ -96,31 +101,66 @@ const BBL_PER_IN = 1.67;
 const $ = id => document.getElementById(id);
 function inches(ft, inch){ return (parseFloat(ft)||0)*12 + (parseFloat(inch)||0); }
 function fmtFtIn(totIn){ if(totIn===null) return "–"; const f=Math.floor(totIn/12), i=Math.round((totIn-f*12)*10)/10; return (f? f+"' ":"") + i + '"'; }
+function tankCount(){ return Math.max(1, Math.min(8, parseInt($('tanks').value)||1)); }
+function renderTanks(){
+  const n = tankCount();
+  $('singleTank').style.display = n===1 ? '' : 'none';
+  $('topSection').style.display = n===1 ? '' : 'none';
+  const mt = $('multiTank');
+  mt.style.display = n===1 ? 'none' : '';
+  if(n>1){
+    let cur = mt.querySelectorAll('.trow').length;
+    if(cur !== n){
+      let hh = '<label>Interface level — gauge EVERY tank (oil on top makes them sit at different levels)</label>';
+      for(let i=1;i<=n;i++){
+        hh += '<div class="row trow" style="margin-bottom:8px"><div style="flex:0 0 62px;align-self:center;font-weight:800;color:var(--dim);font-size:13px;">Tank '+i+'</div>'+
+              '<div class="field"><input type="number" id="t'+i+'_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>'+
+              '<div class="field"><input type="number" id="t'+i+'_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div></div>';
+      }
+      mt.innerHTML = hh;
+      mt.querySelectorAll('input').forEach(i=>i.addEventListener('input', calc));
+    }
+  }
+}
 function calc(){
-  const intf = inches($('int_ft').value, $('int_in').value);
-  const top  = inches($('top_ft').value, $('top_in').value);
+  const n = tankCount();
+  const rate = BBL_PER_IN * n;
   const buf  = parseFloat($('buf').value);
   const load = parseFloat($('load').value);
-  const tanks = Math.max(1, Math.min(8, parseInt($('tanks').value)||1));
-  const rate = BBL_PER_IN * tanks;
+  const top  = inches($('top_ft').value, $('top_in').value);
   const v = $('verdict'), sc = $('statsCard');
+  let intf = 0, lowTank = 0;
+  if(n===1){
+    intf = inches($('int_ft').value, $('int_in').value);
+  } else {
+    let vals = [];
+    for(let i=1;i<=n;i++){
+      const el=$('t'+i+'_ft'); if(!el) { renderTanks(); return; }
+      vals.push(inches($('t'+i+'_ft').value, $('t'+i+'_in').value));
+    }
+    if(vals.some(x=>!x)){ v.className=''; sc.style.display='none'; return; }
+    intf = Math.min.apply(null, vals);
+    lowTank = vals.indexOf(intf)+1;
+  }
   if(!intf || isNaN(buf)){ v.className=''; sc.style.display='none'; return; }
   const usable = intf - buf;
   const bbls = Math.max(0, usable) * rate;
   sc.style.display='block';
-  $('s_usable').textContent = usable >= 0 ? fmtFtIn(usable) : '0"';
+  $('s_usable').textContent = (usable >= 0 ? fmtFtIn(usable) : '0"') + (n>1 ? ' (Tank '+lowTank+')' : '');
   $('s_bbls').textContent = Math.floor(bbls) + " bbl";
   $('s_need').textContent = (!isNaN(load) && load>0) ? fmtFtIn(buf + load/rate) : "–";
-  $('s_oil').textContent = top > intf ? fmtFtIn(top - intf) : (top>0 ? 'check gauges' : '–');
+  $('s_oil').textContent = (n===1 && top > intf) ? fmtFtIn(top - intf) : (n===1 && top>0 ? 'check gauges' : '–');
   if(isNaN(load) || load<=0){ v.className=''; return; }
+  const lowNote = n>1 ? ' Tank '+lowTank+' has the lowest water — it hits the buffer first and sets the limit.' : '';
   if(bbls >= load){
     v.className='ok';
-    v.innerHTML = '&#9989; ENOUGH WATER — full ' + load + ' bbl load OK<small>' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer' + (tanks>1 ? ' across ' + tanks + ' equalized tanks (' + rate.toFixed(2) + ' bbl per inch)' : '') + '</small>';
+    v.innerHTML = '&#9989; ENOUGH WATER — full ' + load + ' bbl load OK<small>' + Math.floor(bbls) + ' bbl drawable before the lowest tank reaches the ' + buf + '&quot; buffer' + (n>1 ? ' ('+n+' equalized tanks, ' + rate.toFixed(2) + ' bbl per inch).' + lowNote : '.') + '</small>';
   } else {
     v.className='no';
-    v.innerHTML = '&#10060; NOT ENOUGH for ' + load + ' bbl<small>Only ' + Math.floor(bbls) + ' bbl available above the ' + buf + '&quot; buffer' + (tanks>1 ? ' across ' + tanks + ' equalized tanks' : '') + ' &mdash; interface needs to be at ' + fmtFtIn(buf + load/rate) + ' or higher for a full load</small>';
+    v.innerHTML = '&#10060; NOT ENOUGH for ' + load + ' bbl<small>Only ' + Math.floor(bbls) + ' bbl drawable before the lowest tank reaches the ' + buf + '&quot; buffer.' + lowNote + ' Lowest interface needs to be at ' + fmtFtIn(buf + load/rate) + ' or higher for a full load.</small>';
   }
 }
+renderTanks();
 document.querySelectorAll('input').forEach(i=>i.addEventListener('input', calc));
 function chipRow(rowId, inputId){
   $(rowId).addEventListener('click', e=>{
@@ -130,6 +170,8 @@ function chipRow(rowId, inputId){
   });
 }
 chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks');
+$('tanks').addEventListener('input', ()=>{ renderTanks(); calc(); });
+document.getElementById('tankchips').addEventListener('click', ()=>{ renderTanks(); calc(); });
 // prefill from ?buffer=30&load=130
 const p = new URLSearchParams(location.search);
 if(p.get('buffer')){ $('buf').value = p.get('buffer'); }
