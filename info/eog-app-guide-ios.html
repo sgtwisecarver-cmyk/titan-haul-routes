@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EOG Work — Running a Ticket | Titan Energy Transportation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0b0b0c;
+    --panel:#17181a;
+    --line:#2a2c30;
+    --ink:#f2f2f3;
+    --mute:#8a8d93;
+    --assigned:#0a84ff;
+    --active:#ffc800;
+    --done:#32d74b;
+    --alert:#ff3b48;
+    --display:"Barlow Condensed","Arial Narrow",sans-serif;
+    --body:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:var(--body);font-size:16px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:32px 20px 72px}
+  /* ---- masthead ---- */
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--mute);margin:0 0 10px;
+  }
+  h1{
+    font-family:var(--display);font-weight:700;
+    font-size:clamp(40px,10vw,68px);line-height:.92;
+    letter-spacing:-.01em;text-transform:uppercase;margin:0;
+  }
+  h1 .thin{display:block;color:var(--active)}
+  .lede{color:var(--mute);margin:16px 0 0;max-width:52ch}
+  .rule{height:2px;background:var(--line);margin:28px 0 8px}
+  /* ---- shift bar ---- */
+  .shift{
+    display:flex;gap:12px;align-items:flex-start;
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;margin:20px 0 8px;
+  }
+  .dot{
+    width:10px;height:10px;border-radius:50%;background:var(--done);
+    flex:none;margin-top:7px;box-shadow:0 0 0 4px rgba(50,215,75,.15);
+  }
+  .shift p{margin:0;font-size:14.5px}
+  .shift strong{font-weight:600}
+  /* ---- step list ---- */
+  ol.steps{list-style:none;margin:0;padding:0}
+  ol.steps > li{
+    position:relative;padding:26px 0 26px 30px;border-top:1px solid var(--line);
+  }
+  ol.steps > li::before{ /* the spine */
+    content:"";position:absolute;left:5px;top:0;bottom:0;width:2px;background:var(--line);
+  }
+  ol.steps > li:first-child::before{top:26px}
+  ol.steps > li:last-child::before{bottom:auto;height:26px}
+  ol.steps > li::after{ /* spine node */
+    content:"";position:absolute;left:0;top:26px;
+    width:12px;height:12px;border-radius:50%;
+    background:var(--bg);border:2px solid var(--line);
+  }
+  li[data-state="assigned"]::after{border-color:var(--assigned)}
+  li[data-state="active"]::after{border-color:var(--active)}
+  li[data-state="done"]::after{border-color:var(--done);background:var(--done)}
+  .num{
+    font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+    color:var(--mute);display:block;margin-bottom:6px;
+  }
+  h2{
+    font-family:var(--display);font-weight:600;text-transform:uppercase;
+    font-size:26px;line-height:1.05;letter-spacing:.01em;margin:0 0 10px;
+  }
+  .chip{
+    display:inline-block;font-family:var(--body);font-size:11.5px;font-weight:600;
+    padding:3px 9px;border-radius:6px;vertical-align:middle;
+    margin-left:8px;letter-spacing:.01em;text-transform:none;
+  }
+  .chip.assigned{background:var(--assigned);color:#fff}
+  .chip.active{background:var(--active);color:#3a2c00}
+  .chip.done{background:var(--done);color:#06340f}
+  .step p{margin:0 0 10px}
+  .step ul{margin:0 0 10px;padding-left:18px}
+  .step li{margin:4px 0}
+  .tap{
+    font-family:var(--body);font-weight:600;
+    border-bottom:2px solid var(--active);padding-bottom:1px;
+  }
+  .fld{font-family:var(--mono);font-size:14px;color:#dcdde0}
+  .req{color:var(--alert);font-weight:700}
+  .note{
+    font-size:14px;color:var(--mute);border-left:2px solid var(--line);
+    padding-left:12px;margin:12px 0 0;
+  }
+  /* ---- quick answers ---- */
+  .qa{margin-top:44px;border-top:2px solid var(--line);padding-top:28px}
+  .qa h3{
+    font-family:var(--display);text-transform:uppercase;font-size:22px;
+    letter-spacing:.02em;margin:0 0 16px;font-weight:600;
+  }
+  .cards{display:grid;gap:12px;grid-template-columns:1fr}
+  @media(min-width:640px){.cards{grid-template-columns:1fr 1fr}}
+  .card{
+    background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px;
+  }
+  .card b{display:block;margin-bottom:6px;font-size:15px}
+  .card p{margin:0;font-size:14.5px;color:#c9cbcf}
+  footer{
+    margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--mute);
+    display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  }
+  @media print{
+    body{background:#fff;color:#111}
+    .wrap{max-width:none;padding:0}
+    h1{color:#111}h1 .thin{color:#111}
+    .shift,.card{background:#fff;border-color:#bbb}
+    .rule,ol.steps>li,.qa,footer{border-color:#bbb}
+    ol.steps>li::before{background:#ccc}
+    .chip{border:1px solid #333;color:#111 !important;background:#fff !important}
+    .fld,.note,.lede,.card p{color:#333}
+    ol.steps>li{page-break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">Titan Energy Transportation &nbsp;/&nbsp; Driver Guide &nbsp;/&nbsp; iPhone (iOS)</p>
+  <h1>EOG Work<span class="thin">Running a ticket</span></h1>
+  <p class="lede">Every load follows the same eight steps. The colored badge at the top of your ticket tells you where you are — match it to the badge on this page and you'll know what to tap next.</p>
+  <div class="shift">
+    <span class="dot"></span>
+    <p><strong>Clock in first.</strong> The home screen shows <em>Shift in Progress</em> at the bottom with your hours worked and hours left. Tap <strong>End Shift</strong> when you're done for the day — not between loads.</p>
+  </div>
+  <div class="rule"></div>
+  <ol class="steps">
+    <li class="step">
+      <span class="num">Step 01</span>
+      <h2>Create the ticket</h2>
+      <p>From the home screen, tap the <span class="tap">+</span> in the top right. Fill in:</p>
+      <ul>
+        <li><span class="fld">Pickup Location <span class="req">*</span></span> — type two or three letters and pick from the list. Closest locations show first, with mileage.</li>
+        <li><span class="fld">Department <span class="req">*</span></span> — Completions, Flowback, or Production.</li>
+        <li><span class="fld">Vendor</span> — already set to Titan. Leave it.</li>
+        <li><span class="fld">Vendor Ticket # <span class="req">*</span></span> — your Titan ticket number.</li>
+        <li><span class="fld">Truck Number <span class="req">*</span></span>, <span class="fld">Trailer Number <span class="req">*</span></span>, <span class="fld">Truck Type <span class="req">*</span></span></li>
+      </ul>
+      <p>Tap <span class="tap">Create Job</span>.</p>
+      <p class="note">A red <span class="req">*</span> means required. The button stays gray until every one is filled in.</p>
+    </li>
+    <li class="step" data-state="assigned">
+      <span class="num">Step 02</span>
+      <h2>Start the ticket <span class="chip assigned">Assigned</span></h2>
+      <p>The app hands you a ticket number (<span class="fld">#IW-000&hellip;</span>). Check the Vehicle Details are right — this is the easiest place to fix a wrong truck or trailer.</p>
+      <p>Tap <span class="tap">Start Ticket</span>.</p>
+    </li>
+    <li class="step" data-state="active">
+      <span class="num">Step 03</span>
+      <h2>Start the pickup <span class="chip active">Job Started</span></h2>
+      <p>Your Time Elapsed clock is now running. When you're on location and ready to load, tap <span class="tap">Start Pickup</span>.</p>
+    </li>
+    <li class="step" data-state="active">
+      <span class="num">Step 04</span>
+      <h2>Load and end the pickup <span class="chip active">Pickup Started</span></h2>
+      <ul>
+        <li><span class="fld">Product <span class="req">*</span></span> — e.g. Produced, Water.</li>
+        <li><span class="fld">Barrels Volume <span class="req">*</span></span> — number keypad, barrels only.</li>
+        <li><span class="fld">Has Issues</span> — flip it on only if something went wrong. It then requires a comment.</li>
+        <li><span class="fld">Reroute Ticket</span> — flip it on to search for a different destination for this load.</li>
+      </ul>
+      <p>Tap <span class="tap">End Pickup</span>.</p>
+    </li>
+    <li class="step" data-state="active">
+      <span class="num">Step 05</span>
+      <h2>Check the load <span class="chip active">Pickup Ended</span></h2>
+      <p>A Pickup Completed summary shows your barrels and your load start and end times. Give it a look, then head out and tap <span class="tap">Start Dropoff</span>.</p>
+    </li>
+    <li class="step" data-state="active">
+      <span class="num">Step 06</span>
+      <h2>Dump and end the dropoff <span class="chip active">Dropoff Started</span></h2>
+      <ul>
+        <li><span class="fld">Is this a disposal job?</span> — turn it on for an SWD. A <span class="fld">Disposal Ticket #</span> field appears; enter the number off the disposal ticket.</li>
+        <li><span class="fld">Dropoff Location <span class="req">*</span></span> — search and select, nearest first.</li>
+        <li><span class="fld">Dropoff Comments</span> — optional.</li>
+      </ul>
+      <p>Tap <span class="tap">End Dropoff</span>.</p>
+    </li>
+    <li class="step" data-state="done">
+      <span class="num">Step 07</span>
+      <h2>Review before you submit</h2>
+      <p>The <strong>Review &amp; Edit Before Submitting</strong> screen lists the whole ticket — locations, times, truck, product, barrels, disposal ticket — and every field is still editable here.</p>
+      <p><strong>This is your last chance to fix a number.</strong> Read it, then tap <span class="tap">Submit</span>.</p>
+    </li>
+    <li class="step" data-state="done">
+      <span class="num">Step 08</span>
+      <h2>Done <span class="chip done">Driver Submitted</span></h2>
+      <p>You'll see <strong>Ticket Completed</strong> with the final numbers. Tap <span class="tap">Export Ticket</span> if you need a copy to send, or <span class="tap">Close</span> to go back. Your Completed count on the home screen goes up by one.</p>
+    </li>
+  </ol>
+  <section class="qa">
+    <h3>Quick answers</h3>
+    <div class="cards">
+      <div class="card">
+        <b>The button is gray and won't tap.</b>
+        <p>A required field above it is empty. Scroll up and look for the red asterisks.</p>
+      </div>
+      <div class="card">
+        <b>I typed the wrong barrels.</b>
+        <p>Fix it on the Review &amp; Edit screen before you hit Submit. After Submit, call your yard.</p>
+      </div>
+      <div class="card">
+        <b>I can't find my location.</b>
+        <p>The list is sorted nearest first and holds hundreds of sites. Type fewer letters, not more.</p>
+      </div>
+      <div class="card">
+        <b>Where am I in the ticket?</b>
+        <p>Look at the colored badge next to the location name at the top, then find that badge on this page.</p>
+      </div>
+    </div>
+  </section>
+  <footer>
+    <span>Titan Energy Transportation LLC</span>
+    <span>EOG Work &mdash; Driver Reference &middot; iPhone (iOS)</span>
+  </footer>
+</div>
+</body>
+</html>
