@@ -1,0 +1,222 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Titan Tank Board</title>
+<style>
+:root{
+  --bg:#0f1115; --card:#1a1e26; --card2:#12151c; --line:#2c3340;
+  --text:#f2f4f8; --dim:#9aa6b8; --cyan:#31c0f7; --orange:#f5a623;
+  --crit:#ff5a5a; --warn:#f5a623; --info:#31c0f7; --ok:#35c65f; --skim:#b98cff; --neutral:#8c98ad;
+}
+@media (prefers-color-scheme: light){
+  :root{ --bg:#eef1f5; --card:#ffffff; --card2:#f4f6f9; --line:#dde1e8; --text:#16181d; --dim:#5a6472; }
+}
+*{box-sizing:border-box}
+body{margin:0; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); -webkit-text-size-adjust:100%;}
+/* ===== gate ===== */
+#gate{position:fixed; inset:0; z-index:100; background:linear-gradient(160deg,#05070e,#0d1631 60%,#12295e); display:flex; align-items:center; justify-content:center; padding:24px;}
+#gate .box{width:100%; max-width:330px; text-align:center;}
+#gate svg{width:54px; height:67px; margin-bottom:10px;}
+#gate h1{font-family:Georgia,serif; letter-spacing:3px; font-size:26px; margin:0; background:linear-gradient(180deg,#e8edf5,#9fc4ff 45%,#31c0f7);-webkit-background-clip:text;background-clip:text;color:transparent;}
+#gate h1 .i{background:linear-gradient(180deg,#ff6b6b,#c81e1e);-webkit-background-clip:text;background-clip:text;color:transparent;}
+#gate .sub{color:#7fb6f0; font-size:11px; letter-spacing:2.5px; font-weight:700; margin:2px 0 22px;}
+#gate .lbl{color:#c7d6ee; font-size:13px; margin-bottom:8px;}
+#gate input{width:100%; padding:13px 14px; border-radius:10px; border:1px solid #2a3f6b; background:#0b132a; color:#fff; font-size:17px; text-align:center; letter-spacing:2px;}
+#gate button{width:100%; margin-top:12px; padding:13px; border:0; border-radius:10px; background:linear-gradient(180deg,#3aa0f0,#1f66d6); color:#fff; font-weight:800; font-size:15px; cursor:pointer;}
+#gate .err{color:#ff8a8a; font-size:13px; height:18px; margin-top:10px;}
+/* ===== app ===== */
+#app{display:none; max-width:1050px; margin:0 auto; padding:14px 14px 60px;}
+header.top{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 2px 12px;}
+.brand{font-family:Georgia,serif; font-weight:800; letter-spacing:2px; font-size:19px;}
+.brand .i{color:var(--crit)} .brand .accent{color:var(--cyan)}
+.htitle{font-weight:800; font-size:14px; color:var(--dim); letter-spacing:.5px;}
+.spacer{flex:1}
+.toggle{display:flex; gap:6px; background:var(--card2); padding:4px; border-radius:10px;}
+.toggle button{border:0; background:transparent; color:var(--dim); font-weight:700; font-size:13.5px; padding:8px 16px; border-radius:7px; cursor:pointer;}
+.toggle button.on{background:var(--cyan); color:#04121e;}
+/* headline */
+.headline{border-radius:14px; padding:14px 16px; margin-bottom:14px; font-size:15px; font-weight:700; display:flex; align-items:center; gap:10px; border:1px solid var(--line); background:var(--card);}
+.headline .big{font-size:22px}
+.headline.calm{border-left:5px solid var(--ok)} .headline.busy{border-left:5px solid var(--warn)} .headline.hot{border-left:5px solid var(--crit)}
+/* kpis */
+.kpis{display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:16px;}
+.kpi{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; border-left-width:4px;}
+.kpi .n{font-size:28px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+.kpi .l{font-size:11.5px; color:var(--dim); margin-top:6px; line-height:1.25;}
+.kpi.crit{border-left-color:var(--crit)} .kpi.warn{border-left-color:var(--warn)} .kpi.info{border-left-color:var(--info)} .kpi.ok{border-left-color:var(--ok)} .kpi.neutral{border-left-color:var(--neutral)} .kpi.skim{border-left-color:var(--skim)}
+/* controls */
+.controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px; font-size:12.5px; color:var(--dim);}
+.controls select{background:var(--card); color:var(--text); border:1px solid var(--line); border-radius:8px; padding:7px 10px; font-size:13px; font-weight:600;}
+.controls .rt{margin-left:auto; display:flex; gap:8px; align-items:center;}
+.controls button{border:1px solid var(--line); background:var(--card); color:var(--text); border-radius:8px; padding:7px 12px; font-size:12.5px; font-weight:700; cursor:pointer;}
+/* pad cards */
+.grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:12px;}
+.pad{background:var(--card); border:1px solid var(--line); border-top-width:4px; border-radius:14px; padding:14px; }
+.pad.crit{border-top-color:var(--crit)} .pad.warn{border-top-color:var(--warn)} .pad.info{border-top-color:var(--info)} .pad.ok{border-top-color:var(--ok)} .pad.skim{border-top-color:var(--skim)} .pad.neutral{border-top-color:var(--neutral)}
+.pad .r1{display:flex; align-items:flex-start; justify-content:space-between; gap:8px;}
+.pad .name{font-weight:800; font-size:16px; line-height:1.2;}
+.pill{display:inline-block; padding:3px 10px; border-radius:20px; font-size:10.5px; font-weight:800; white-space:nowrap; text-transform:uppercase; letter-spacing:.3px;}
+.pill.crit{background:rgba(255,90,90,.18); color:#ff8f8f} .pill.warn{background:rgba(245,166,35,.18); color:#f5b850}
+.pill.info{background:rgba(49,192,247,.16); color:#68cff8} .pill.ok{background:rgba(53,198,95,.16); color:#63d488}
+.pill.skim{background:rgba(185,140,255,.18); color:#c9a9ff} .pill.neutral{background:rgba(140,152,173,.18); color:var(--dim)}
+.hero{margin:12px 0 4px; display:flex; align-items:baseline; gap:8px;}
+.hero .v{font-size:34px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+.hero .u{font-size:13px; color:var(--dim); font-weight:600;}
+.hero.lo .v{color:var(--crit)} .hero.mid .v{color:var(--warn)}
+.herolab{font-size:11.5px; color:var(--dim); margin-bottom:10px;}
+.chips{display:flex; flex-wrap:wrap; gap:6px;}
+.chip{background:var(--card2); border-radius:8px; padding:5px 9px; font-size:12px;}
+.chip b{font-variant-numeric:tabular-nums;}
+.det{margin-top:10px; font-size:12.5px;}
+.det summary{cursor:pointer; color:var(--cyan); font-weight:700; font-size:12px; list-style:none;}
+.det summary::-webkit-details-marker{display:none}
+.det summary::before{content:'▸ '; }
+.det[open] summary::before{content:'▾ '; }
+.det .grid2{display:grid; grid-template-columns:1fr 1fr; gap:4px 12px; margin-top:8px;}
+.det .grid2 div{display:flex; justify-content:space-between; gap:8px; border-bottom:1px solid var(--line); padding:3px 0;}
+.det .grid2 .k{color:var(--dim)} .det .grid2 .val{font-variant-numeric:tabular-nums; text-align:right}
+.det .notes{margin-top:8px; color:var(--dim); font-size:12px; line-height:1.5}
+.loading{padding:50px; text-align:center; color:var(--dim)}
+.err2{padding:24px; text-align:center; color:#ff8f8f; line-height:1.6}
+.foot{margin-top:20px; font-size:11px; color:var(--dim); text-align:center; line-height:1.7}
+.foot a{color:var(--cyan); text-decoration:none}
+</style></head>
+<body>
+<div id="gate"><div class="box">
+<svg viewBox="0 0 100 125" aria-hidden="true"><defs>
+<linearGradient id="hh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0c0d12"/><stop offset=".5" stop-color="#1b2f8f"/><stop offset="1" stop-color="#2aa7ee"/></linearGradient>
+<linearGradient id="hc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff5a5a"/><stop offset="1" stop-color="#b31212"/></linearGradient></defs>
+<path d="M50 2 L62 17 L50 36 L38 17 Z" fill="url(#hc)" stroke="#d9e0ea" stroke-width="2.5"/>
+<path d="M50 27 C27 27 17 44 17 63 L17 92 L30 83 L33 112 L44 99 L44 76 C38 72 34 66 34 59 L44 64 L56 64 L66 59 C66 66 62 72 56 76 L56 99 L67 112 L70 83 L83 92 L83 63 C83 44 73 27 50 27 Z" fill="url(#hh)" stroke="#d9e0ea" stroke-width="2.5" stroke-linejoin="round"/>
+<path d="M46 66 L54 66 L52 82 L48 82 Z" fill="#0d1220" stroke="#d9e0ea" stroke-width="1.5"/></svg>
+<h1>T<span class="i">I</span>TAN</h1><div class="sub">TANK BOARD</div>
+<div class="lbl">Enter passcode</div>
+<input id="pc" type="password" inputmode="text" autocomplete="off" autofocus>
+<button id="unlock">Unlock</button>
+<div class="err" id="gerr"></div>
+</div></div>
+
+<div id="app">
+<header class="top">
+  <div class="brand">T<span class="i">I</span>TAN</div>
+  <div class="htitle">Tank Board</div>
+  <div class="spacer"></div>
+  <div class="toggle"><button id="tAsc" class="on">Ascent</button><button id="tEog">EOG</button></div>
+</header>
+
+<div class="headline" id="headline">—</div>
+<div class="kpis" id="kpis"></div>
+<div class="controls">
+  <label>Sort:
+    <select id="sort">
+      <option value="urgent">Most urgent first</option>
+      <option value="name">Pad name</option>
+    </select>
+  </label>
+  <span class="rt"><span id="fetched" style="font-size:11px"></span><button id="refresh">↻ Refresh</button></span>
+</div>
+<div id="content" class="loading">Loading…</div>
+<div class="foot">Internal — Titan Energy Transportation. Auto-refreshes every 3 minutes.<br>
+Time shown is hours until a pad reaches shutdown (tanks full). <a href="../index.html">← Haul Routes</a></div>
+</div>
+
+<script>
+async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
+const REAL_HASH="92d048177d0666cae6c1fc236f681adb24a0028129026558c6bd4942c5322fbe";
+async function tryUnlock(v){ if(await sha(v)===REAL_HASH){ try{sessionStorage.setItem('titan_tanks_ok','1')}catch(e){}; showApp(); return true;} return false; }
+function showApp(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; load(); }
+document.getElementById('unlock').onclick=async()=>{ if(!await tryUnlock(document.getElementById('pc').value)) document.getElementById('gerr').textContent='Incorrect passcode'; };
+document.getElementById('pc').addEventListener('keydown',e=>{ if(e.key==='Enter') document.getElementById('unlock').click(); });
+try{ if(sessionStorage.getItem('titan_tanks_ok')==='1') showApp(); }catch(e){}
+
+const SRC={
+  Ascent:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vRql7lfsC1RMXEqlyEPkFcTzX5HNQ9sqL8sX_MHU8WsF_Lsip5IPbGmy-trkAxxKNK-sgpFb8UgGsfc/pub?gid=1846056363&single=true&output=csv",
+    padCol:"Pad", statusCol:"Status", esdCol:"Hrs to ESD",
+    cols:["Pad","Status","Hrs to ESD","Hrs to Alarm","Hrs to Load","Loads","bbl/hr","Water bbl","Oil bbl","Pullable bbl","Max Level in","Live Tank","Zone","Size","Tanks","Notes"],
+    chips:r=>[['Loads ready',r['Loads']],['Zone',(r['Zone']||'').replace('Zone ','Z')],['Level',r['Max Level in']?r['Max Level in']+'"':'']],
+    detail:["Hrs to Alarm","Hrs to Load","bbl/hr","Water bbl","Oil bbl","Pullable bbl","Live Tank","Size","Tanks"], notesCol:"Notes"},
+  EOG:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vT-uJNhS0Sn7Yg7JKneX8W8ee_zv7_UqHFQjM4EoA4v2bQhPswRRKJjL3X8gJfgto882Kp1WO4mNkmL/pub?gid=1156597874&single=true&output=csv",
+    padCol:"PAD", statusCol:"STATUS", esdCol:"HRS TO ESD",
+    cols:["PAD","TANKS","AVG TOP","MAX TOP","AVG INT","PROD (BPD)","BPH","HRS TO ESD","NEED","LDS >6'","LDS 3-6'","% FULL","YARD / DISPOSAL","OIL","STATUS","LOADS/SHIFT"],
+    chips:r=>[['% full',r['% FULL']],['Loads needed',r['NEED']],['Loads/shift',r['LOADS/SHIFT']]],
+    detail:["TANKS","AVG TOP","MAX TOP","PROD (BPD)","BPH","LDS >6'","LDS 3-6'","OIL","LOADS/SHIFT"], notesCol:"YARD / DISPOSAL"}
+};
+let CUR="Ascent", SORTBY="urgent", RAW={};
+
+function parseCSV(t){ const rows=[]; let row=[], f="", q=false;
+  for(let i=0;i<t.length;i++){ const c=t[i];
+    if(q){ if(c==='"'){ if(t[i+1]==='"'){f+='"';i++} else q=false } else f+=c }
+    else{ if(c==='"')q=true; else if(c===','){row.push(f);f=""} else if(c==='\n'){row.push(f);rows.push(row);row=[];f=""} else if(c==='\r'){} else f+=c } }
+  if(f.length||row.length){row.push(f);rows.push(row)} return rows; }
+function severity(s){ s=(s||"").toUpperCase();
+  if(s.includes('CRITICAL')||s.includes('OVER ALARM')||s.includes('90'))return 'crit';
+  if(s.includes('URGENT')||s.includes('APPROACH'))return 'warn';
+  if(s.includes('SKIM'))return 'skim';
+  if(s.includes('HIGH')||s.includes('LOAD READY'))return 'info';
+  if(s.includes('OK')||s.includes('FILLING')||s.includes('WORKING FLOOR'))return 'ok';
+  return 'neutral'; }
+function num(v){ const n=parseFloat(String(v).replace(/[^0-9.\-]/g,'')); return isNaN(n)?null:n; }
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function cleanStatus(s){ return String(s||'').replace(/[^\x00-\x7F]+/g,'').trim()||s; }
+
+async function load(){
+  const cfg=SRC[CUR];
+  const c=document.getElementById('content'); c.className='loading'; c.textContent='Loading '+CUR+' tanks…';
+  try{ const res=await fetch(cfg.url,{cache:'no-store'}); RAW[CUR]=await res.text(); render();
+    document.getElementById('fetched').textContent='updated '+new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'});
+  }catch(e){ c.className='err2'; c.innerHTML='Couldn’t load the sheet.<br>Make sure it’s still <b>Published to web</b> in Google Sheets.'; }
+}
+function records(){
+  const cfg=SRC[CUR]; const rows=parseCSV(RAW[CUR]||"");
+  let hi=rows.findIndex(r=>r.map(x=>x.trim()).includes(cfg.padCol)); if(hi<0) return null;
+  const header=rows[hi].map(x=>x.trim()); const idx={}; cfg.cols.forEach(c=>idx[c]=header.indexOf(c));
+  return rows.slice(hi+1).filter(r=>r[idx[cfg.padCol]]&&r[idx[cfg.padCol]].trim()).map(r=>{
+    const o={}; cfg.cols.forEach(c=>o[c]= idx[c]>=0?(r[idx[c]]||'').trim():''); o._sev=severity(o[cfg.statusCol]); o._esd=num(o[cfg.esdCol]); return o; });
+}
+function render(){
+  const cfg=SRC[CUR]; const recs=records();
+  if(!recs){ const c=document.getElementById('content'); c.className='err2'; c.textContent='Unexpected sheet format.'; return; }
+  if(SORTBY==='name') recs.sort((a,b)=>a[cfg.padCol].localeCompare(b[cfg.padCol]));
+  else recs.sort((a,b)=>{ if(a._esd==null)return 1; if(b._esd==null)return -1; return a._esd-b._esd; });
+  renderHead(recs); renderKpis(recs); renderCards(recs,cfg);
+}
+function renderHead(recs){
+  const crit=recs.filter(r=>r._sev==='crit').length, warn=recs.filter(r=>r._sev==='warn').length;
+  const h=document.getElementById('headline'); let cls,txt;
+  if(crit>0){ cls='hot'; txt='<span class="big">🔴 '+crit+' pad'+(crit>1?'s':'')+' need a truck now</span>'+(warn?' · 🟡 '+warn+' getting close':''); }
+  else if(warn>0){ cls='busy'; txt='<span class="big">🟡 '+warn+' pad'+(warn>1?'s':'')+' getting close</span> · nothing critical yet'; }
+  else { cls='calm'; txt='<span class="big">✅ Field is in good shape</span> · no pads at alarm'; }
+  h.className='headline '+cls; h.innerHTML=txt;
+}
+function renderKpis(recs){
+  const crit=recs.filter(r=>r._sev==='crit').length, warn=recs.filter(r=>r._sev==='warn').length;
+  const tiles=[['crit',crit,CUR==='Ascent'?'Over alarm — haul now':'Critical — haul now'],
+               ['warn',warn,CUR==='Ascent'?'Approaching alarm':'Urgent soon'],
+               ['neutral',recs.length,'Pads on board']];
+  if(CUR==='Ascent'){ tiles.push(['ok',recs.reduce((s,r)=>s+(num(r['Loads'])||0),0),'Loads ready to pull now']); }
+  else{ tiles.push(['ok',recs.reduce((s,r)=>s+(num(r["LDS >6'"])||0),0),'Loads ready to pull now']);
+        tiles.push(['info',recs.reduce((s,r)=>s+(num(r['NEED'])||0),0),'Loads needed']); }
+  document.getElementById('kpis').innerHTML=tiles.map(t=>'<div class="kpi '+t[0]+'"><div class="n">'+t[1]+'</div><div class="l">'+esc(t[2])+'</div></div>').join('');
+}
+function renderCards(recs,cfg){
+  const html=recs.map(r=>{
+    const esd=r._esd, hcls=esd!=null&&esd<6?'lo':(esd!=null&&esd<14?'mid':'');
+    const chips=cfg.chips(r).filter(c=>c[1]!=null&&String(c[1]).trim()!=='').map(c=>'<span class="chip">'+esc(c[0])+' <b>'+esc(c[1])+'</b></span>').join('');
+    const dets=cfg.detail.filter(k=>r[k]!=null&&String(r[k]).trim()!=='').map(k=>'<div><span class="k">'+esc(k)+'</span><span class="val">'+esc(r[k])+'</span></div>').join('');
+    const notes=r[cfg.notesCol]&&r[cfg.notesCol].trim()?'<div class="notes">'+esc(cfg.notesCol==='YARD / DISPOSAL'?'Yard / Disposal: ':'')+esc(r[cfg.notesCol])+'</div>':'';
+    return '<div class="pad '+r._sev+'"><div class="r1"><div class="name">'+esc(r[cfg.padCol])+'</div>'+
+      '<span class="pill '+r._sev+'">'+esc(cleanStatus(r[cfg.statusCol]))+'</span></div>'+
+      '<div class="hero '+hcls+'"><span class="v">'+(esd!=null?esd:'—')+'</span><span class="u">hrs to shutdown</span></div>'+
+      '<div class="chips">'+chips+'</div>'+
+      ((dets||notes)?'<details class="det"><summary>Details</summary><div class="grid2">'+dets+'</div>'+notes+'</details>':'')+
+      '</div>';
+  }).join('');
+  const c=document.getElementById('content'); c.className=''; c.innerHTML='<div class="grid">'+html+'</div>';
+}
+document.getElementById('tAsc').onclick=()=>{ CUR='Ascent'; document.getElementById('tAsc').classList.add('on'); document.getElementById('tEog').classList.remove('on'); load(); };
+document.getElementById('tEog').onclick=()=>{ CUR='EOG'; document.getElementById('tEog').classList.add('on'); document.getElementById('tAsc').classList.remove('on'); load(); };
+document.getElementById('sort').onchange=e=>{ SORTBY=e.target.value; if(RAW[CUR]) render(); };
+document.getElementById('refresh').onclick=load;
+setInterval(()=>{ if(document.getElementById('app').style.display==='block') load(); }, 180000);
+</script>
+</body></html>
