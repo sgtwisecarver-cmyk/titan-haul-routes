@@ -30,6 +30,7 @@ header.top{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4
 .brand{font-family:Georgia,serif; font-weight:800; letter-spacing:2px; font-size:19px;}
 .brand .i{color:var(--crit)} .brand .accent{color:var(--cyan)}
 .htitle{font-weight:800; font-size:14px; color:var(--dim); letter-spacing:.5px;}
+.backlink{color:var(--cyan); text-decoration:none; font-weight:700; font-size:13px; border:1px solid var(--line); border-radius:8px; padding:6px 11px; white-space:nowrap;}
 .spacer{flex:1}
 .toggle{display:flex; gap:6px; background:var(--card2); padding:4px; border-radius:10px;}
 .toggle button{border:0; background:transparent; color:var(--dim); font-weight:700; font-size:13.5px; padding:8px 16px; border-radius:7px; cursor:pointer;}
@@ -98,6 +99,7 @@ header.top{display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4
 
 <div id="app">
 <header class="top">
+  <a href="../index.html" class="backlink">← Routes</a>
   <div class="brand">T<span class="i">I</span>TAN</div>
   <div class="htitle">Tank Board</div>
   <div class="spacer"></div>
@@ -122,7 +124,8 @@ Time shown is hours until a pad reaches shutdown (tanks full). <a href="../index
 
 <script>
 async function sha(s){const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');}
-const REAL_HASH="92d048177d0666cae6c1fc236f681adb24a0028129026558c6bd4942c5322fbe";
+const REAL_HASH="a1ec3157b1476f8697b932297639ddee8462cb5895dcf1967c34c48fe92b3870";
+const ALIAS={Ascent:{"Skull Fork":"Skull Fork A"}};
 async function tryUnlock(v){ if(await sha(v)===REAL_HASH){ try{sessionStorage.setItem('titan_tanks_ok','1')}catch(e){}; showApp(); return true;} return false; }
 function showApp(){ document.getElementById('gate').style.display='none'; document.getElementById('app').style.display='block'; load(); }
 document.getElementById('unlock').onclick=async()=>{ if(!await tryUnlock(document.getElementById('pc').value)) document.getElementById('gerr').textContent='Incorrect passcode'; };
@@ -138,8 +141,8 @@ const SRC={
   EOG:{url:"https://docs.google.com/spreadsheets/d/e/2PACX-1vT-uJNhS0Sn7Yg7JKneX8W8ee_zv7_UqHFQjM4EoA4v2bQhPswRRKJjL3X8gJfgto882Kp1WO4mNkmL/pub?gid=1156597874&single=true&output=csv",
     padCol:"PAD", statusCol:"STATUS", esdCol:"HRS TO ESD",
     cols:["PAD","TANKS","AVG TOP","MAX TOP","AVG INT","PROD (BPD)","BPH","HRS TO ESD","NEED","LDS >6'","LDS 3-6'","% FULL","YARD / DISPOSAL","OIL","STATUS","LOADS/SHIFT"],
-    chips:r=>[['% full',r['% FULL']],['Loads needed',r['NEED']],['Loads/shift',r['LOADS/SHIFT']]],
-    detail:["TANKS","AVG TOP","MAX TOP","PROD (BPD)","BPH","LDS >6'","LDS 3-6'","OIL","LOADS/SHIFT"], notesCol:"YARD / DISPOSAL"}
+    chips:r=>[['% full',r['% FULL']],["Above 6'",r["LDS >6'"]],['Loads/shift',r['LOADS/SHIFT']]],
+    detail:["NEED","TANKS","AVG TOP","MAX TOP","PROD (BPD)","BPH","LDS 3-6'","OIL","LOADS/SHIFT"], notesCol:"YARD / DISPOSAL"}
 };
 let CUR="Ascent", SORTBY="urgent", RAW={};
 
@@ -194,8 +197,7 @@ function renderKpis(recs){
                ['warn',warn,CUR==='Ascent'?'Approaching alarm':'Urgent soon'],
                ['neutral',recs.length,'Pads on board']];
   if(CUR==='Ascent'){ tiles.push(['ok',recs.reduce((s,r)=>s+(num(r['Loads'])||0),0),'Loads ready to pull now']); }
-  else{ tiles.push(['ok',recs.reduce((s,r)=>s+(num(r["LDS >6'"])||0),0),'Loads ready to pull now']);
-        tiles.push(['info',recs.reduce((s,r)=>s+(num(r['NEED'])||0),0),'Loads needed']); }
+  else{ tiles.push(['ok',recs.reduce((s,r)=>s+(num(r["LDS >6'"])||0),0),"Loads above 6' — ready to pull"]); }
   document.getElementById('kpis').innerHTML=tiles.map(t=>'<div class="kpi '+t[0]+'"><div class="n">'+t[1]+'</div><div class="l">'+esc(t[2])+'</div></div>').join('');
 }
 function renderCards(recs,cfg){
@@ -204,7 +206,8 @@ function renderCards(recs,cfg){
     const chips=cfg.chips(r).filter(c=>c[1]!=null&&String(c[1]).trim()!=='').map(c=>'<span class="chip">'+esc(c[0])+' <b>'+esc(c[1])+'</b></span>').join('');
     const dets=cfg.detail.filter(k=>r[k]!=null&&String(r[k]).trim()!=='').map(k=>'<div><span class="k">'+esc(k)+'</span><span class="val">'+esc(r[k])+'</span></div>').join('');
     const notes=r[cfg.notesCol]&&r[cfg.notesCol].trim()?'<div class="notes">'+esc(cfg.notesCol==='YARD / DISPOSAL'?'Yard / Disposal: ':'')+esc(r[cfg.notesCol])+'</div>':'';
-    return '<div class="pad '+r._sev+'"><div class="r1"><div class="name">'+esc(r[cfg.padCol])+'</div>'+
+    const nm=(ALIAS[CUR]&&ALIAS[CUR][r[cfg.padCol]])||r[cfg.padCol];
+    return '<div class="pad '+r._sev+'"><div class="r1"><div class="name">'+esc(nm)+'</div>'+
       '<span class="pill '+r._sev+'">'+esc(cleanStatus(r[cfg.statusCol]))+'</span></div>'+
       '<div class="hero '+hcls+'"><span class="v">'+(esd!=null?esd:'—')+'</span><span class="u">hrs to shutdown</span></div>'+
       '<div class="chips">'+chips+'</div>'+
