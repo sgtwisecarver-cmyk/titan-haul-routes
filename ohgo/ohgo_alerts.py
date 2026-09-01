@@ -15,9 +15,11 @@ import os, re, json, math, sys, urllib.request, urllib.parse, datetime
 OHGO_BASE   = "https://publicapi.ohgo.com/api/v1"
 ENDPOINTS   = ["construction", "incidents", "dangerous-slowdowns"]  # add "weather-sensor-sites" later
 REGION      = None            # e.g. "east" / "central"; None = statewide (we filter by pad anyway)
-ROUTE_RADIUS_MI = 8.0         # a state-route event must be within this many miles of the pad to count
+ROUTE_RADIUS_MI = 3.0         # a state-route event must be within this many miles of the pad to count
                               # (lower = fewer, tighter matches; raise if you're missing real ones.
                               #  Local-road-name matches ignore this and always count — they're precise.)
+# construction is high-volume; keep only events that actually close/restrict a road
+CLOSE_RE = re.compile(r'clos|detour|blocked|restrict|ramp closed|road closed|lane closed', re.I)
 INDEX_PATH  = "index.html"
 OUT_PATH    = "alerts.json"
 CATEGORY_LABEL = {"construction":"Construction/closure","incidents":"Incident","dangerous-slowdowns":"Slowdown"}
@@ -116,6 +118,8 @@ def match(pads, events, cat):
     hits={}
     for ev in events:
         e=event_fields(ev)
+        if cat=='construction' and not CLOSE_RE.search(e['blob']):
+            continue   # only real closures/restrictions from construction
         for p in pads:
             matched=False; why=""
             # 1) local road-name match (high confidence, no distance needed)
@@ -151,12 +155,17 @@ def main():
             evs=ohgo_get(cat,key)
         except Exception as e:
             print(f"  {cat}: fetch error {e}", file=sys.stderr); continue
+        if evs:
+            print(f"  [{cat}] sample event keys: {list(evs[0].keys())}")
+            for s in evs[:2]:
+                ef=event_fields(s)
+                print(f"   [{cat}] road={ef['road']!r} desc={ef['desc'][:80]!r} loc={ef['loc'][:60]!r} routes={sorted(ef['routes'])}")
         h=match(pads,evs,cat)
         print(f"  {cat}: {len(evs)} events -> {sum(len(v) for v in h.values())} pad-matches on {len(h)} pads")
         for k,v in h.items(): allhits.setdefault(k,[]).extend(v)
     # dedupe per pad
     for k in allhits: allhits[k]=list(dict.fromkeys(allhits[k]))
-    out={"updated":datetime.datetime.utcnow().isoformat()+"Z","source":"OHGO (ODOT)","alerts":allhits}
+    out={"updated":datetime.datetime.now(datetime.timezone.utc).isoformat(),"source":"OHGO (ODOT)","alerts":allhits}
     json.dump(out,open(OUT_PATH,'w'))
     print(f"wrote {OUT_PATH}: {len(allhits)} pads flagged")
 
