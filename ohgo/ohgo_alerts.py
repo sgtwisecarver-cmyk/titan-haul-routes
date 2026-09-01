@@ -60,13 +60,15 @@ def load_pads(path):
             for g in d['segs']:
                 if g.get('s'): seqs.append(g['s'])
         if not seqs: continue
-        # approach = last APPROACH_STEPS of each direction (the local end)
-        appr=set(); appn=set()
+        # approach routes = last APPROACH_STEPS (numbers matched only here, to avoid interstate noise);
+        # local road NAMES matched across the WHOLE route (names are precise, so no noise).
+        appr=set(); names=set()
         for s in seqs:
-            r,n=_toks(" ".join(s[-APPROACH_STEPS:])); appr|=r; appn|=n
-        if not appr and not appn: continue
+            r,_=_toks(" ".join(s[-APPROACH_STEPS:])); appr|=r
+            _,n=_toks(" ".join(s)); names|=n
+        if not appr and not names: continue
         pads.append({'id':normid(d['src']+'-'+d['pad']),'pad':d['pad'],'lat':d['lat'],'lon':d['lon'],
-                     'appr':appr,'appn':appn})
+                     'appr':appr,'names':names})
     return pads
 
 def ohgo_get(endpoint, key):
@@ -93,24 +95,38 @@ def event_fields(ev):
     road=str(g('routeName','roadName','route'))
     desc=str(g('description','category')).strip()
     loc=str(g('location','locationDescription')).strip()
-    # event's own route(s): from routeName ONLY (description carries detour routes -> noise)
     routes=set()
     for m in ROUTE_TYPE_RE.finditer(road): routes.add(norm_route(m.group(1),m.group(2)))
     return {'lat':lat,'lon':lon,'road':road,'desc':desc or loc,'loc':loc,'routes':routes,
+            'start':parse_dt(g('startDate','startTime')),'end':parse_dt(g('endDate','endTime')),
             'blob':(road+" "+desc+" "+loc).lower()}
 
+def parse_dt(s):
+    if not s: return None
+    s=str(s).strip().replace('Z','')
+    try: return datetime.datetime.fromisoformat(s).replace(tzinfo=None)
+    except: pass
+    for f in ('%m/%d/%Y %I:%M:%S %p','%m/%d/%Y %H:%M:%S','%m/%d/%Y','%Y-%m-%d'):
+        try: return datetime.datetime.strptime(s,f)
+        except: pass
+    return None
+
 def match(pads, events, cat):
+    now=datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
     hits={}
     for ev in events:
         e=event_fields(ev)
-        if cat=='construction' and not CLOSE_RE.search(e['blob']): continue
+        if cat=='construction':
+            if not CLOSE_RE.search(e['blob']): continue
+            if e['end'] and e['end'] < now: continue        # already ended
+            if e['start'] and e['start'] > now: continue     # not started yet (currently-active only)
         if e['lat'] is None: continue
         for p in pads:
             dist=haversine_mi(p['lat'],p['lon'],e['lat'],e['lon'])
             if dist>PROX_MI: continue
             matched=False; why=""
-            # 1) local approach-road NAME match (most precise)
-            for nm in p['appn']:
+            # 1) local road NAME match anywhere in the route (most precise)
+            for nm in p['names']:
                 if nm in e['blob']: matched=True; why=nm.title(); break
             # 2) approach ROUTE match (non-interstate; interstate only if right on the pad)
             if not matched and e['routes']:
@@ -133,6 +149,10 @@ def main():
     for cat in ENDPOINTS:
         try: evs=ohgo_get(cat,key)
         except Exception as e: print(f"  {cat}: fetch error {e}", file=sys.stderr); continue
+        for s in evs:   # probe: does OHGO carry the Pipe Creek / Homco closure?
+            b=(str(s.get('routeName',''))+" "+str(s.get('description',''))+" "+str(s.get('location',''))).lower()
+            if 'pipe creek' in b or 'homco' in b:
+                print(f"  >>> OHGO HAS IT: {str(s.get('description',''))[:120]}")
         h=match(pads,evs,cat)
         print(f"  {cat}: {len(evs)} events -> {sum(len(v) for v in h.values())} matches on {len(h)} pads")
         for k,v in h.items(): allhits.setdefault(k,[]).extend(v)
