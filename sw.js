@@ -6,7 +6,8 @@ const SHELL = [
   './', './index.html', './manifest.json',
   './icon-192.png', './icon-512.png', './icon-180.png',
   './info/about.html', './info/contact.html', './info/calculator.html',
-  './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html'
+  './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html',
+  './info/safety-video.html'
 ];
 
 self.addEventListener('install', e => {
@@ -25,6 +26,9 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   if (url.origin !== location.origin) return;          // live weather/maps: network only
   if (e.request.method !== 'GET') return;
+
+  // video: never cache (43MB + range/206 requests break Cache API) — let the browser stream it
+  if (url.pathname.includes('/videos/')) return;
 
   if (url.pathname.includes('/pdfs/')) {
     // route maps: cache-first, cache as opened
