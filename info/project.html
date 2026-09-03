@@ -1,0 +1,147 @@
+<!DOCTYPE html><html lang="en"><head><script>(function(){try{var t=localStorage.getItem('titan_theme');if(t==='light'||t==='dark')document.documentElement.classList.add(t);}catch(e){}})();</script><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;600;700&display=swap"><title>The Haul Routes Project — Titan Energy Transportation</title>
+<meta name="description" content="Every approved haul route, every disposal, every safety document — in one zero-login tool built for Titan Energy Transportation drivers.">
+<style>
+:root{--bg:#1b1e24;--card:#262a33;--card2:#2f343f;--text:#e8eaef;--dim:#a6acb8;--line:#3a3f4b;--cyan:#2bb0e8;--cyan2:#7fd2f5;--navy:#1e2a78;--red:#d21f2c;--grn:#43d98f;--amber:#f5a623;
+--fd:"Barlow Condensed","Arial Narrow","Segoe UI",sans-serif;--fb:"Inter","Segoe UI",Roboto,Helvetica,Arial,sans-serif;}
+html.light{--bg:#eef0f4;--card:#ffffff;--card2:#e6e9f0;--text:#15171d;--dim:#5b6373;--line:#d5d9e2;}
+@media (prefers-color-scheme: light){html:not(.dark){--bg:#eef0f4;--card:#ffffff;--card2:#e6e9f0;--text:#15171d;--dim:#5b6373;--line:#d5d9e2;}}
+*{box-sizing:border-box}
+body{font-family:var(--fb);background:var(--bg);color:var(--text);margin:0;padding:18px 16px 40px;line-height:1.6;}
+.wrap{max-width:760px;margin:0 auto;}
+.thdr{display:flex;align-items:center;gap:10px;background:linear-gradient(160deg,#0d1338 0%,#141c52 55%,#1e2a78 100%);border-bottom:3px solid var(--cyan);border-radius:12px;padding:10px 12px;margin-bottom:22px;}
+.logobadge{display:inline-flex;align-items:center;background:#fff;border-radius:8px;padding:5px 11px;box-shadow:0 2px 10px rgba(0,0,0,.45);}
+.logobadge img{display:block;height:40px;width:auto;}
+.thdr a.hback{margin-left:auto;color:var(--cyan);text-decoration:none;font-weight:700;font-size:13px;white-space:nowrap;}
+h1,h2,h3{font-family:var(--fd);letter-spacing:.4px;line-height:1.1;}
+.kicker{font-family:var(--fd);font-weight:600;letter-spacing:2.4px;text-transform:uppercase;color:var(--cyan);font-size:13px;margin:0 0 6px;}
+h1{font-size:38px;font-weight:700;margin:0 0 10px;text-transform:uppercase;letter-spacing:1px;}
+h1 .r{color:#f0555a;}
+.lede{font-size:17px;color:var(--text);margin:0 0 6px;max-width:640px;}
+.sub{color:var(--dim);font-size:15px;margin:0 0 22px;max-width:640px;}
+h2{font-size:26px;font-weight:700;margin:34px 0 12px;padding-top:18px;border-top:1px solid var(--line);text-transform:uppercase;letter-spacing:1px;}
+h2:first-of-type{border-top:0;padding-top:0;}
+h3{font-size:19px;font-weight:600;margin:0 0 4px;color:var(--cyan2);}
+html.light h3{color:#1a7fb0;} @media (prefers-color-scheme: light){html:not(.dark) h3{color:#1a7fb0;}}
+p{margin:0 0 12px;}
+/* stat tiles */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:18px 0 6px;}
+@media (max-width:520px){.stats{grid-template-columns:repeat(2,1fr);}}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 12px 12px;}
+.stat .n{font-family:var(--fd);font-size:34px;font-weight:700;color:var(--cyan);line-height:1;}
+.stat .l{font-size:12.5px;color:var(--dim);margin-top:5px;line-height:1.3;}
+/* feature groups */
+.feat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px 12px;margin-bottom:10px;}
+.feat h3{display:flex;align-items:center;gap:8px;}
+.feat ul{margin:6px 0 0;padding-left:20px;font-size:15px;}
+.feat li{margin-bottom:5px;} .feat li b{color:var(--text);}
+/* stakeholders */
+.who{border-left:4px solid var(--cyan);background:var(--card);border-radius:0 12px 12px 0;padding:14px 16px;margin-bottom:12px;}
+.who.d{border-color:var(--grn);} .who.s{border-color:var(--amber);} .who.o{border-color:#7d92f2;} .who.c{border-color:#c792ea;} .who.k{border-color:var(--red);}
+.who h3{color:var(--text);margin-bottom:6px;} .who p{font-size:15px;margin-bottom:8px;} .who p:last-child{margin-bottom:0;}
+.who .tag{display:inline-block;font-family:var(--fd);font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim);margin-bottom:2px;}
+/* sources */
+.src{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;}
+@media (max-width:520px){.src{grid-template-columns:1fr;}}
+.src div{background:var(--card2);border-radius:10px;padding:12px 14px;font-size:14.5px;} .src b{display:block;color:var(--text);margin-bottom:2px;}
+/* cta */
+.cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px;}
+.btn{flex:1 1 40%;min-width:150px;text-align:center;padding:14px 12px;border-radius:10px;font-weight:800;font-size:15px;text-decoration:none;}
+.btn.p{background:linear-gradient(180deg,#2a3a9e,#1e2a78);color:#fff;} .btn.g{background:linear-gradient(180deg,#43d98f,#1d9e5f);color:#03160c;}
+.fine{color:var(--dim);font-size:12.5px;margin-top:22px;}
+</style></head>
+<body><div class="wrap"><div class="thdr">
+<a class="logobadge" href="../index.html" aria-label="Titan Energy Transportation — Haul Routes"><img src="../img/titan-logo.png" alt="Titan Energy Transportation LLC"></a>
+<a class="hback" href="../index.html">&larr; Routes</a>
+</div>
+
+<div class="kicker">Titan Energy Transportation</div>
+<h1>The Haul Routes <span class="r">Project</span></h1>
+<p class="lede">Every approved haul route, every disposal, every safety document our drivers need &mdash; on the phone already in their pocket, with nothing to log into.</p>
+<p class="sub">Water hauling runs on knowing exactly which roads you're allowed to take to a pad you may never have seen. Haul Routes puts the operator's own approved route in front of the driver in under five seconds, and keeps the whole fleet working from the same page.</p>
+
+<div class="stats">
+  <div class="stat"><div class="n">1,159</div><div class="l">pads, disposals &amp; fracs on the board</div></div>
+  <div class="stat"><div class="n">5</div><div class="l">energy customers, 23 counties</div></div>
+  <div class="stat"><div class="n">97%</div><div class="l">of customer pads carry written turn-by-turn or the official route map</div></div>
+  <div class="stat"><div class="n">710</div><div class="l">official route-map &amp; RUMA PDFs, one tap away</div></div>
+  <div class="stat"><div class="n">82</div><div class="l">disposal sites &mdash; 108 injection wells verified against ODNR</div></div>
+  <div class="stat"><div class="n">20 min</div><div class="l">refresh on live road-closure alerts from ODOT</div></div>
+</div>
+
+<h2>What it does</h2>
+
+<div class="feat"><h3>&#128269; Finds the pad in seconds</h3><ul>
+<li>Type a few letters of a pad, well, county, or property number &mdash; results narrow as you type.</li>
+<li>Filter by customer with one tap. <b>Favorites</b> and <b>Recents</b> put your regular runs at the top.</li>
+<li><b>Nearest</b> sorts every pad by distance from where the truck is sitting right now.</li>
+<li>Share any pad to another driver as a link that opens straight to that card.</li>
+</ul></div>
+
+<div class="feat"><h3>&#129517; Gets the truck there on the approved road</h3><ul>
+<li><b>Turn-by-turn directions</b> transcribed from the operator's RUMA route sheet &mdash; the route the county agreed to, not the one GPS picks.</li>
+<li>The <b>official route map PDF</b> attached to the card, cached on the phone once opened.</li>
+<li>Pads with two approaches show both. Detours and alternates are flagged.</li>
+<li>A <b>Navigate</b> button to the pad entrance &mdash; with a standing warning that GPS will not follow the haul route.</li>
+</ul></div>
+
+<div class="feat"><h3>&#128679; Warns before you leave the yard</h3><ul>
+<li><b>Live road alerts:</b> ODOT closures, wrecks, and restrictions are matched to the roads in each pad's route and lit up on that card &mdash; automatically, every 20 minutes.</li>
+<li>Dispatch can push a <b>manual alert</b> to a pad (county slips, pipe-creek washouts, gate changes) in seconds.</li>
+<li>A <b>dispatch ticker</b> across the top of the board for fleet-wide notices, plus current weather.</li>
+</ul></div>
+
+<div class="feat"><h3>&#129534; Paperwork that matches the ticket</h3><ul>
+<li>Well names and <b>API numbers</b> on the card for 834 pads.</li>
+<li>For Ascent, the <b>property number</b> required on the BOL, matched to each well &mdash; 1,100 wells across 249 pads.</li>
+<li>Every disposal shows its injection well(s) and API, verified against ODNR &mdash; the number that belongs on the manifest.</li>
+</ul></div>
+
+<div class="feat"><h3>&#128737;&#65039; Safety where the driver actually is</h3><ul>
+<li>Customer <b>loading and offload SOPs</b> one tap from the pad card, plus a link to the official document.</li>
+<li>The <b>Site Safety video</b> &mdash; the fifteen pieces of equipment on every pad and what each one can do to you &mdash; with tap-to-jump chapters and captions.</li>
+<li><b>Good Catch / KPA</b> hazard reporting straight into each customer's safety system.</li>
+<li>Active <b>frac traffic control plans</b> with staging, CB channel, and escort rules.</li>
+</ul></div>
+
+<div class="feat"><h3>&#128241; Built for a truck cab</h3><ul>
+<li>Installs to the home screen like an app. <b>Works offline</b> in dead zones &mdash; the board and any map already opened stay available.</li>
+<li>No login, no password, no account to forget. Dark mode for night, light mode for glare.</li>
+<li>One tap to <b>call dispatch</b> from any screen.</li>
+</ul></div>
+
+<h2>What it means for&hellip;</h2>
+
+<div class="who d"><span class="tag">Drivers</span><h3>No more guessing at a strange gate</h3>
+<p>The right route is on your phone before you leave the yard, in words and on a map. A new driver is productive on day one instead of learning 200 pads the hard way. Nearest tells you what's close when a load falls through. And when something's wrong on a road, the card tells you before you're committed to it.</p></div>
+
+<div class="who"><span class="tag">Dispatch</span><h3>Update once. Everyone has it.</h3>
+<p>The "how do I get to&hellip;" calls drop off, because the answer is already in the driver's hand. A new RUMA route, a gate change, a road slip &mdash; you change it in one place and every truck sees it on the next load. The whole fleet works from the same source of truth instead of forty personal versions of it.</p></div>
+
+<div class="who s"><span class="tag">Safety</span><h3>The approved route, every time</h3>
+<p>RUMA compliance stops depending on memory. Routes come from the operator's documents, not from a GPS that will happily send a loaded truck down a posted township road. SOPs sit beside the pad they apply to, hazard reporting is one tap, and the safety video puts the equipment briefing in every cab, not just the orientation room. Live closure alerts take a whole category of bad detours off the table.</p></div>
+
+<div class="who o"><span class="tag">Ownership &amp; management</span><h3>Less risk, less waste, more professionalism</h3>
+<p>Fewer RUMA violations and fewer road complaints from townships and operators. Fewer wasted miles from wrong turns and backtracking. Faster onboarding for new drivers. A verified pad database &mdash; routes, wells, APIs, property numbers, disposals &mdash; that is now a company asset rather than knowledge that walks out the door with a dispatcher. Built on free platforms with no per-seat licensing, so the cost of running it is close to zero.</p></div>
+
+<div class="who c"><span class="tag">Our customers</span><h3>Titan trucks on your approved roads</h3>
+<p>The route you filed with the county is the route our driver is reading. Your loading and offload SOPs are on the card for your pads. Your Good Catch and KPA programs are one tap from the driver's hand. Fewer township complaints, fewer surprises on your locations, and a hauler that treats your paperwork as seriously as you do.</p></div>
+
+<div class="who k"><span class="tag">The counties we drive through</span><h3>Heavy trucks on the roads built for them</h3>
+<p>Road use agreements exist to keep loaded water trucks on bonded, maintained routes and off the roads that can't take them. Haul Routes makes the approved route the easy route, which is the only way that agreement gets honored at four in the morning by a driver who's never been to that pad.</p></div>
+
+<h2>Built on verified sources</h2>
+<p>Nothing on the board is guessed. Every entry traces back to a document or a database we can point to.</p>
+<div class="src">
+  <div><b>Operator route sheets &amp; RUMAs</b>Turn-by-turn directions and route maps transcribed from the haul-route packets our customers issue.</div>
+  <div><b>Ohio Department of Natural Resources</b>Well names, API numbers, and locations from the Division of Oil &amp; Gas well database; disposal wells cross-checked against all 227 active Class II injection wells in Ohio.</div>
+  <div><b>Ohio Department of Transportation</b>Live construction, closure, and incident data from OHGO, matched to each pad's route.</div>
+  <div><b>Titan dispatch</b>Pin locations, gate notes, and alerts confirmed by the people who send the trucks. Anything not yet verified is labeled that way on the card.</div>
+</div>
+
+<div class="cta">
+  <a class="btn p" href="../index.html">&#128269; Open Haul Routes</a>
+  <a class="btn g" href="tel:+17404335399">&#128222; Call Dispatch</a>
+</div>
+
+<p class="fine">Haul Routes is built and maintained by Titan Energy Transportation dispatch. Route data is only as current as the documents behind it &mdash; drivers verify with dispatch before a first haul to a new pad. Figures on this page reflect the board as of September 2026.</p>
+</div></body></html>
