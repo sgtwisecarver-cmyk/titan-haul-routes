@@ -25,6 +25,7 @@ input[type=number]:focus{border-color:var(--cyan);}
 .stat{background:var(--card2);border-radius:10px;padding:10px 12px;}
 .stat .v{font-size:19px;font-weight:800;color:var(--cyan);} .stat .l{font-size:11.5px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
 .hint{font-size:12.5px;color:var(--dim);margin-top:10px;}
+.bpinote{background:rgba(245,166,35,.16);border:1px solid rgba(245,166,35,.55);border-left:4px solid #f5a623;border-radius:8px;padding:10px 12px;font-size:14px;margin:12px 0 4px;} .bpinote[hidden]{display:none;}
 
 .thdr{display:flex;align-items:center;gap:10px;background:linear-gradient(160deg,#0d1338 0%,#141c52 55%,#1e2a78 100%);border-bottom:3px solid #2bb0e8;border-radius:12px;padding:10px 12px;margin-bottom:16px;}
 .logobadge{display:inline-flex;align-items:center;background:#fff;border-radius:8px;padding:5px 11px;box-shadow:0 2px 10px rgba(0,0,0,.45);}
@@ -37,7 +38,8 @@ input[type=number]:focus{border-color:var(--cyan);}
 <a class="hback" href="../index.html">&larr; Routes</a>
 </div>
 <h1><span class="accent">Water Load</span> Calculator</h1>
-<p style="font-size:14px;color:var(--dim);margin:4px 0 0;">1&quot; = 1.67 bbls &nbsp;&middot;&nbsp; 1&apos; = 20 bbls</p>
+<p style="font-size:14px;color:var(--dim);margin:4px 0 0;">1&quot; = <span id="bpiShow">1.67</span> bbls &nbsp;&middot;&nbsp; 1&apos; = <span id="bpiFt">20</span> bbls</p>
+<div id="bpiNote" class="bpinote" hidden>&#9888;&#65039; <b>Non-standard tank strapping:</b> using <b><span id="bpiVal">1.17</span> bbl per inch</b> for <span id="bpiPad">this pad</span>. Standard tanks are 1.67.</div>
 
 <div class="card">
 <div id="singleTank">
@@ -73,6 +75,12 @@ input[type=number]:focus{border-color:var(--cyan);}
   <div class="chip" data-v="60">60</div><div class="chip" data-v="110">110</div><div class="chip" data-v="120">120</div>
   <div class="chip" data-v="130">130</div><div class="chip" data-v="150">150</div>
 </div>
+<label>Tank strapping (barrels per inch)</label>
+<div class="field"><input type="number" id="bpi" min="0.1" step="0.01" inputmode="decimal" value="1.67"><span>bbl / in</span></div>
+<div class="chips" id="bpichips">
+  <div class="chip on" data-v="1.67">1.67 &mdash; standard</div><div class="chip" data-v="1.17">1.17</div>
+</div>
+<div class="hint">Most 500-bbl tanks are 1.67 bbl per inch. Some pads are strapped differently &mdash; if a pad card shows a different factor, use it here.</div>
 </div>
 
 <div id="verdict"></div>
@@ -83,11 +91,12 @@ input[type=number]:focus{border-color:var(--cyan);}
     <div class="stat"><div class="v" id="s_need">–</div><div class="l">Min interface for load</div></div>
     <div class="stat"><div class="v" id="s_oil">–</div><div class="l">Oil on top</div></div>
   </div>
-  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at 1.67 bbls per inch <b>per tank</b>. Equalized tanks are connected, but oil sitting on top pushes that tank's water interface DOWN &mdash; so gauge every tank and the calculator uses the LOWEST one, since it reaches the buffer first. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
+  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at the strapping factor set above <b>per tank</b> (1.67 bbl per inch is standard). Equalized tanks are connected, but oil sitting on top pushes that tank's water interface DOWN &mdash; so gauge every tank and the calculator uses the LOWEST one, since it reaches the buffer first. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
 </div>
 
 <script>
-const BBL_PER_IN = 1.67;
+function bpi(){ const v=parseFloat(document.getElementById('bpi').value); return (v>0 && isFinite(v)) ? v : 1.67; }
+function syncBpi(){ const v=bpi(); $('bpiShow').textContent=v.toFixed(2).replace(/\.?0+$/,''); $('bpiFt').textContent=(v*12).toFixed(1).replace(/\.0$/,''); $('bpiVal').textContent=v; const nonstd=Math.abs(v-1.67)>0.005; $('bpiNote').hidden=!nonstd; document.querySelectorAll('#bpichips .chip').forEach(c=>c.classList.toggle('on', Math.abs(parseFloat(c.dataset.v)-v)<0.005)); }
 const $ = id => document.getElementById(id);
 function inches(ft, inch){ return (parseFloat(ft)||0)*12 + (parseFloat(inch)||0); }
 function fmtFtIn(totIn){ if(totIn===null) return "–"; const f=Math.floor(totIn/12), i=Math.round((totIn-f*12)*10)/10; return (f? f+"' ":"") + i + '"'; }
@@ -114,7 +123,7 @@ function renderTanks(){
 }
 function calc(){
   const n = tankCount();
-  const rate = BBL_PER_IN * n;
+  const rate = bpi() * n; syncBpi();
   const buf  = parseFloat($('buf').value);
   const load = parseFloat($('load').value);
   const top  = inches($('top_ft').value, $('top_in').value);
@@ -159,7 +168,7 @@ function chipRow(rowId, inputId){
     c.classList.add('on'); $(inputId).value=c.dataset.v; calc();
   });
 }
-chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks');
+chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks'); chipRow('bpichips','bpi');
 $('tanks').addEventListener('input', ()=>{ renderTanks(); calc(); });
 document.getElementById('tankchips').addEventListener('click', ()=>{ renderTanks(); calc(); });
 // prefill from ?buffer=30&load=130
@@ -167,6 +176,8 @@ const p = new URLSearchParams(location.search);
 if(p.get('buffer')){ $('buf').value = p.get('buffer'); }
 if(p.get('load')){ $('load').value = p.get('load'); }
 if(p.get('tanks')){ $('tanks').value = p.get('tanks'); }
+if(p.get('bpi')){ $('bpi').value = p.get('bpi'); }
+if(p.get('pad')){ $('bpiPad').textContent = p.get('pad'); }
 calc();
 </script>
 </div><script data-goatcounter="https://titanroutes.goatcounter.com/count"

@@ -133,6 +133,15 @@
     .fld,.note,.lede,.card p{color:#333}
     ol.steps>li{page-break-inside:avoid}
   }
+  /* get the app */
+  .getapp{display:flex;gap:18px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:18px}
+  .getapp-txt{flex:1;min-width:0}
+  .brandline{font-family:var(--display);font-weight:700;font-size:30px;letter-spacing:.5px;line-height:1;display:flex;align-items:center;gap:8px;color:var(--ink)}
+  .brandline .red{color:#d21f2c}.brandline .hat{font-size:24px}
+  .scan{margin:8px 0 12px;font-size:14px;color:var(--mute)}
+  .storebtn{display:inline-block;background:#fff;color:#000;font-weight:700;text-decoration:none;padding:11px 16px;border-radius:10px;font-size:15px}
+  .tiny{margin:10px 0 0;font-size:12px;color:var(--mute)}
+  @media (max-width:520px){.getapp{text-align:center}.brandline{justify-content:center}}
 </style>
 </head>
 <body>
@@ -143,6 +152,14 @@
   <div class="shift">
     <span class="dot"></span>
     <p><strong>Clock in first.</strong> The home screen shows <em>Shift in Progress</em> at the bottom with your hours worked and hours left. Tap <strong>End Shift</strong> when you're done for the day — not between loads.</p>
+  </div>
+  <div class="getapp">
+    <div class="getapp-txt">
+      <div class="brandline"><span class="hat">&#9937;</span> EOG <span class="red">Work</span></div>
+      <p class="scan">Don't have the app yet? It's free on the App Store.</p>
+      <a class="storebtn" href="https://apps.apple.com/us/app/eog-work/id6780653689" target="_blank" rel="noopener">Open in the App Store &nbsp;&#8599;</a>
+      <p class="tiny">apps.apple.com/us/app/eog-work &middot; Android users: see the Android guide in the menu</p>
+    </div>
   </div>
   <div class="rule"></div>
   <ol class="steps">
