@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<script src="gate.js"></script>
+<meta name=viewport content='width=device-width,initial-scale=1'>
+<title>Sample test - Titan Mentor Program</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#F4F5F2;--card:#FFF;--ink:#1A2028;--ink-2:#4A5460;--ink-3:#79838F;
+--steel:#2C4A63;--steel-soft:#E5EAEF;--amber:#A8701A;--rule:#D9DDD9;--rule-2:#EBEEEA;
+--go:#2E6B4F;--go-bg:#E5EFE9;--stop:#9B3226;--stop-bg:#F7E4E0;--band:#1E2C39;
+--shadow:0 1px 2px rgba(26,32,40,.05),0 10px 26px -18px rgba(26,32,40,.3)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--paper:#14191E;--card:#1B2128;
+--ink:#E9ECE8;--ink-2:#AAB4BD;--ink-3:#7C8690;--steel:#8DB2CE;--steel-soft:#233240;--amber:#D9A44F;
+--rule:#2B333B;--rule-2:#222A31;--go:#6FBE95;--go-bg:#1B2C24;--stop:#DE8878;--stop-bg:#2F1F1D;
+--band:#0E1418;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 26px -18px rgba(0,0,0,.7)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3","Segoe UI",system-ui,sans-serif;font-size:16.5px;line-height:1.62}
+.wrap{max-width:1040px;margin:0 auto;padding:0 26px 90px}
+nav{background:var(--band);border-bottom:3px solid var(--amber)}
+nav .in{max-width:1040px;margin:0 auto;padding:0 26px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 28px;min-height:62px}
+nav .brand{font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:15px;letter-spacing:.13em;text-transform:uppercase;color:#F2F4F0;margin-right:auto}
+nav a{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:#93A2AE;text-decoration:none;padding:8px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#F2F4F0}
+nav a.on{color:var(--amber);border-bottom-color:var(--amber)}
+h1{font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:clamp(30px,5vw,44px);line-height:1.06;margin:44px 0 10px;text-wrap:balance}
+.lede{font-size:18px;color:var(--ink-2);max-width:66ch;margin:0 0 8px}
+h2.sec{font-family:Oswald,Impact,sans-serif;font-weight:500;font-size:13px;letter-spacing:.17em;text-transform:uppercase;color:var(--steel);margin:52px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.mod{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);margin-bottom:22px}
+.mod .hd{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:15px 20px;border-bottom:1px solid var(--rule-2)}
+.mod .cd{font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--steel);font-weight:500}
+.mod h3{margin:0;font-size:19px;font-weight:700;flex:1 1 240px}
+.mod .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.mod .bd{display:grid;gap:20px;padding:20px}
+@media(min-width:800px){.mod .bd{grid-template-columns:1.4fr 1fr}}
+.mod p{margin:0 0 14px;color:var(--ink-2);font-size:15px}
+video{width:100%;background:#000;display:block;border:1px solid var(--rule)}
+.thumb{border:1px solid var(--rule);background:#fff;display:block;width:100%}
+.cap{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);letter-spacing:.05em;margin-top:7px;text-transform:uppercase}
+.novid{border:1px dashed var(--rule);padding:26px;text-align:center;color:var(--ink-3);font-size:14px}
+.fset{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);margin-bottom:22px;padding:18px 20px}
+.fset h3{margin:0 0 3px;font-size:18px}
+.fset p{margin:0 0 14px;color:var(--ink-2);font-size:14.5px}
+.pages{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.pages a{display:block;text-decoration:none}
+.btn{display:inline-block;font-family:Oswald,Impact,sans-serif;font-size:13px;letter-spacing:.11em;text-transform:uppercase;background:var(--steel);color:#fff;padding:11px 20px;border:0;cursor:pointer;text-decoration:none}
+.btn:hover{opacity:.9}
+.q{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
+.q .n{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.08em}
+.q h4{margin:6px 0 12px;font-size:17px;font-weight:700;line-height:1.35}
+.q label{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid transparent;border-radius:3px;cursor:pointer;font-size:15px;color:var(--ink-2)}
+.q label:hover{background:var(--steel-soft)}
+.q input{margin-top:5px;flex:0 0 auto}
+.fb{margin-top:12px;padding:11px 14px;font-size:14.5px;display:none}
+.fb.ok{background:var(--go-bg);color:var(--go);display:block}
+.fb.no{background:var(--stop-bg);color:var(--stop);display:block}
+.score{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--amber);box-shadow:var(--shadow);padding:20px 24px;margin:22px 0;display:none}
+.score.show{display:block}
+.score b{font-family:Oswald,Impact,sans-serif;font-size:34px;display:block;line-height:1.1}
+.note{font-size:14px;color:var(--ink-3);max-width:70ch}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<nav><div class="in"><span class="brand">Titan &middot; Mentor Program</span><a href="index.html">Overview</a><a href="modules.html">Modules</a><a href="forms.html">Forms</a><a href="quiz.html" class="on">Sample Test</a></div></nav>
+<div class=wrap>
+<h1>Sample test &mdash; Module 3</h1><p class=lede>This is the real Module 3 assessment, live. Ten questions, 90% to pass &mdash; the highest threshold in the program, because inconsistent grading is the problem it exists to fix. Wrong answers return the reasoning.</p><p class=note>In production these run as Microsoft Forms quizzes inside the Titan tenant, auto-graded, with scores posting to a SharePoint list. This page is the same content, working, so it can be tried without a login.</p><h2 class="sec">Module 3 &mdash; Grading Rubrics</h2><form id=qz><div class=q><span class=n>QUESTION 1 OF 10</span><h4>A Y on a checklist item means:</h4><label><input type=radio name=q0 value=0> <span>Better than the trainee did yesterday</span></label><label><input type=radio name=q0 value=1> <span>Attempted and eventually completed</span></label><label><input type=radio name=q0 value=2> <span>Done correctly, with normal coaching along the way</span></label><label><input type=radio name=q0 value=3> <span>Done correctly, without the mentor prompting or correcting</span></label><div class=fb id=fb0></div></div><div class=q><span class=n>QUESTION 2 OF 10</span><h4>A trainee performs an item correctly after you stepped in once to correct them. The mark is:</h4><label><input type=radio name=q1 value=0> <span>Y with a comment noting the correction</span></label><label><input type=radio name=q1 value=1> <span>N</span></label><label><input type=radio name=q1 value=2> <span>Y - they finished it correctly</span></label><label><input type=radio name=q1 value=3> <span>NA</span></label><div class=fb id=fb1></div></div><div class=q><span class=n>QUESTION 3 OF 10</span><h4>NA is used when:</h4><label><input type=radio name=q2 value=0> <span>The item came up but you did not observe it closely</span></label><label><input type=radio name=q2 value=1> <span>You would rather not mark an N</span></label><label><input type=radio name=q2 value=2> <span>The item genuinely did not come up that day</span></label><label><input type=radio name=q2 value=3> <span>The trainee is not ready to be graded on it yet</span></label><div class=fb id=fb2></div></div><div class=q><span class=n>QUESTION 4 OF 10</span><h4>Which comment meets the standard for an N?</h4><label><input type=radio name=q3 value=0> <span>Didn&#x27;t sound horn before backing; stopped, walked through it, had her repeat it correctly</span></label><label><input type=radio name=q3 value=1> <span>Needs improvement on backing procedures</span></label><label><input type=radio name=q3 value=2> <span>Worked on backing</span></label><label><input type=radio name=q3 value=3> <span>Backing - see Section 7</span></label><div class=fb id=fb3></div></div><div class=q><span class=n>QUESTION 5 OF 10</span><h4>On the Shadow Sheet driving scale, the standard required for solo clearance is:</h4><label><input type=radio name=q4 value=0> <span>Most of the time</span></label><label><input type=radio name=q4 value=1> <span>Habitually</span></label><label><input type=radio name=q4 value=2> <span>Anything above Never</span></label><label><input type=radio name=q4 value=3> <span>Some of the time</span></label><div class=fb id=fb4></div></div><div class=q><span class=n>QUESTION 6 OF 10</span><h4>A driving item marked “Some of the time” means:</h4><label><input type=radio name=q5 value=0> <span>Acceptable if the rest of the sheet is clean</span></label><label><input type=radio name=q5 value=1> <span>Acceptable early in the shadow phase</span></label><label><input type=radio name=q5 value=2> <span>No clearance on that item without documented extra training</span></label><label><input type=radio name=q5 value=3> <span>Round to “Most of the time” and note it in comments</span></label><div class=fb id=fb5></div></div><div class=q><span class=n>QUESTION 7 OF 10</span><h4>A driving item marked “Never” is:</h4><label><input type=radio name=q6 value=0> <span>A red flag - escalate to Manager and EHS before the next shift</span></label><label><input type=radio name=q6 value=1> <span>Handled with the coaching model and re-graded later</span></label><label><input type=radio name=q6 value=2> <span>A note for the next shadow day</span></label><label><input type=radio name=q6 value=3> <span>Only escalated if dangerous/reckless was also marked Yes</span></label><div class=fb id=fb6></div></div><div class=q><span class=n>QUESTION 8 OF 10</span><h4>On the Final Sign-Off, a Y means:</h4><label><input type=radio name=q7 value=0> <span>The mentor vouches for the SSE on that item</span></label><label><input type=radio name=q7 value=1> <span>EHS is satisfied after speaking with the SSE</span></label><label><input type=radio name=q7 value=2> <span>The item was covered at some point during training</span></label><label><input type=radio name=q7 value=3> <span>The Daily/Shadow paperwork clearly documents it - consistent Y&#x27;s, real comments, no unresolved N&#x27;s</span></label><div class=fb id=fb7></div></div><div class=q><span class=n>QUESTION 9 OF 10</span><h4>A trainee is genuinely competent at an item, but nothing in the file documents it. At Final Sign-Off it is marked:</h4><label><input type=radio name=q8 value=0> <span>N - a true-but-undocumented competency is still an N</span></label><label><input type=radio name=q8 value=1> <span>Y, with a note that documentation was thin</span></label><label><input type=radio name=q8 value=2> <span>NA, and flagged for verification next time</span></label><label><input type=radio name=q8 value=3> <span>Y, on the mentor&#x27;s verbal confirmation</span></label><div class=fb id=fb8></div></div><div class=q><span class=n>QUESTION 10 OF 10</span><h4>When should trainees be told these rubric definitions?</h4><label><input type=radio name=q9 value=0> <span>At the Shadow phase, when clearance is on the line</span></label><label><input type=radio name=q9 value=1> <span>They are internal to mentors and EHS</span></label><label><input type=radio name=q9 value=2> <span>Before training starts - no surprises</span></label><label><input type=radio name=q9 value=3> <span>At the first N, so it lands with context</span></label><div class=fb id=fb9></div></div></form><p><button class=btn onclick="grade()">Submit answers</button></p><div class=score id=sc></div>
+<footer>TITAN ENERGY TRANSPORTATION &middot; EHS &middot; MENTOR QUALIFICATION PROGRAM &middot; DRAFT</footer>
+</div>
+<script>
+var KEY=[3, 1, 2, 0, 1, 2, 0, 3, 0, 2], WHY=["Without prompting or correcting. Coaching in the moment means it was not a Y.", "One correction is still an N - never round up.", "NA is never used to avoid marking an N.", "Every N needs a comment on what happened AND what correction was given.", "Habitually - correct almost every time - is the standard for solo clearance.", "\u201cSome of the time\u201d is a coaching gap. \u201cMost of the time\u201d is the one that is OK early and should trend to Habitually.", "\u201cNever\u201d = not observed at all. It is an escalation trigger, not a coaching item.", "EHS works from documentation. If the paperwork does not clearly support it, EHS does not sign it off on good faith.", "If EHS cannot find it, it is not verified. That is exactly why the Daily and Shadow standards matter.", "Tell trainees these definitions before training starts."], PASS=90;
+function grade(){
+ var right=0;
+ for(var i=0;i<KEY.length;i++){
+  var sel=document.querySelector('input[name=q'+i+']:checked');
+  var fb=document.getElementById('fb'+i);
+  var ok=sel&&parseInt(sel.value)===KEY[i];
+  if(ok)right++;
+  fb.className='fb '+(ok?'ok':'no');
+  fb.textContent=(ok?'Correct. ':'Not correct. ')+WHY[i];
+ }
+ var pct=Math.round(right/KEY.length*100);
+ var sc=document.getElementById('sc'); sc.className='score show';
+ sc.innerHTML='<b>'+pct+'%</b>'+right+' of '+KEY.length+' correct &mdash; '+
+  (pct>=PASS?'<strong>pass</strong>. Module 3 complete.':'<strong>below the 90% threshold</strong>. Three attempts are allowed; a fourth requires a sit-down with EHS.');
+ sc.scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>

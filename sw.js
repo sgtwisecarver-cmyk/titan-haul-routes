@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v18';
+const VER = 'titan-v19';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -29,6 +29,8 @@ self.addEventListener('fetch', e => {
 
   // video: never cache (43MB + range/206 requests break Cache API) — let the browser stream it
   if (url.pathname.includes('/videos/')) return;
+  // mentor qualification demo: gated, video-heavy — never cache any of it offline
+  if (url.pathname.includes('/mentor/')) return;
 
   if (url.pathname.includes('/pdfs/')) {
     // route maps: cache-first, cache as opened

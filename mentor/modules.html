@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang=en>
+<head>
+<meta charset=utf-8>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<script src="gate.js"></script>
+<meta name=viewport content='width=device-width,initial-scale=1'>
+<title>Modules - Titan Mentor Program</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{--paper:#F4F5F2;--card:#FFF;--ink:#1A2028;--ink-2:#4A5460;--ink-3:#79838F;
+--steel:#2C4A63;--steel-soft:#E5EAEF;--amber:#A8701A;--rule:#D9DDD9;--rule-2:#EBEEEA;
+--go:#2E6B4F;--go-bg:#E5EFE9;--stop:#9B3226;--stop-bg:#F7E4E0;--band:#1E2C39;
+--shadow:0 1px 2px rgba(26,32,40,.05),0 10px 26px -18px rgba(26,32,40,.3)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--paper:#14191E;--card:#1B2128;
+--ink:#E9ECE8;--ink-2:#AAB4BD;--ink-3:#7C8690;--steel:#8DB2CE;--steel-soft:#233240;--amber:#D9A44F;
+--rule:#2B333B;--rule-2:#222A31;--go:#6FBE95;--go-bg:#1B2C24;--stop:#DE8878;--stop-bg:#2F1F1D;
+--band:#0E1418;--shadow:0 1px 2px rgba(0,0,0,.4),0 10px 26px -18px rgba(0,0,0,.7)}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Source Sans 3","Segoe UI",system-ui,sans-serif;font-size:16.5px;line-height:1.62}
+.wrap{max-width:1040px;margin:0 auto;padding:0 26px 90px}
+nav{background:var(--band);border-bottom:3px solid var(--amber)}
+nav .in{max-width:1040px;margin:0 auto;padding:0 26px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 28px;min-height:62px}
+nav .brand{font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:15px;letter-spacing:.13em;text-transform:uppercase;color:#F2F4F0;margin-right:auto}
+nav a{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:#93A2AE;text-decoration:none;padding:8px 0;border-bottom:2px solid transparent}
+nav a:hover{color:#F2F4F0}
+nav a.on{color:var(--amber);border-bottom-color:var(--amber)}
+h1{font-family:Oswald,Impact,sans-serif;font-weight:600;font-size:clamp(30px,5vw,44px);line-height:1.06;margin:44px 0 10px;text-wrap:balance}
+.lede{font-size:18px;color:var(--ink-2);max-width:66ch;margin:0 0 8px}
+h2.sec{font-family:Oswald,Impact,sans-serif;font-weight:500;font-size:13px;letter-spacing:.17em;text-transform:uppercase;color:var(--steel);margin:52px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.mod{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);margin-bottom:22px}
+.mod .hd{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;padding:15px 20px;border-bottom:1px solid var(--rule-2)}
+.mod .cd{font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--steel);font-weight:500}
+.mod h3{margin:0;font-size:19px;font-weight:700;flex:1 1 240px}
+.mod .meta{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.mod .bd{display:grid;gap:20px;padding:20px}
+@media(min-width:800px){.mod .bd{grid-template-columns:1.4fr 1fr}}
+.mod p{margin:0 0 14px;color:var(--ink-2);font-size:15px}
+video{width:100%;background:#000;display:block;border:1px solid var(--rule)}
+.thumb{border:1px solid var(--rule);background:#fff;display:block;width:100%}
+.cap{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--ink-3);letter-spacing:.05em;margin-top:7px;text-transform:uppercase}
+.novid{border:1px dashed var(--rule);padding:26px;text-align:center;color:var(--ink-3);font-size:14px}
+.fset{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);margin-bottom:22px;padding:18px 20px}
+.fset h3{margin:0 0 3px;font-size:18px}
+.fset p{margin:0 0 14px;color:var(--ink-2);font-size:14.5px}
+.pages{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
+.pages a{display:block;text-decoration:none}
+.btn{display:inline-block;font-family:Oswald,Impact,sans-serif;font-size:13px;letter-spacing:.11em;text-transform:uppercase;background:var(--steel);color:#fff;padding:11px 20px;border:0;cursor:pointer;text-decoration:none}
+.btn:hover{opacity:.9}
+.q{background:var(--card);border:1px solid var(--rule);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:14px}
+.q .n{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);letter-spacing:.08em}
+.q h4{margin:6px 0 12px;font-size:17px;font-weight:700;line-height:1.35}
+.q label{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid transparent;border-radius:3px;cursor:pointer;font-size:15px;color:var(--ink-2)}
+.q label:hover{background:var(--steel-soft)}
+.q input{margin-top:5px;flex:0 0 auto}
+.fb{margin-top:12px;padding:11px 14px;font-size:14.5px;display:none}
+.fb.ok{background:var(--go-bg);color:var(--go);display:block}
+.fb.no{background:var(--stop-bg);color:var(--stop);display:block}
+.score{background:var(--card);border:1px solid var(--rule);border-left:4px solid var(--amber);box-shadow:var(--shadow);padding:20px 24px;margin:22px 0;display:none}
+.score.show{display:block}
+.score b{font-family:Oswald,Impact,sans-serif;font-size:34px;display:block;line-height:1.1}
+.note{font-size:14px;color:var(--ink-3);max-width:70ch}
+footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--rule);font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-3)}
+</style>
+</head>
+<body>
+<nav><div class="in"><span class="brand">Titan &middot; Mentor Program</span><a href="index.html">Overview</a><a href="modules.html" class="on">Modules</a><a href="forms.html">Forms</a><a href="quiz.html">Sample Test</a></div></nav>
+<div class=wrap>
+<h1>The eight modules</h1><p class=lede>Seven carry video; Module 8 is the written scenario exam. Total running time is 37 minutes. A candidate completes the program in two sittings.</p><h2 class="sec">Curriculum</h2><div class=mod><div class=hd><span class=cd>M1</span><h3>Production Site Elements</h3><span class=meta>15 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="../videos/site-safety.mp4"></video><div class=cap>M1_Production_Site_Elements.mp4</div></div><div><p>Fifteen pieces of equipment, what each one holds, and where the ESD and muster area are. Recognition, not operation.</p><img class=thumb src="images/DailySheet_BLANK-1.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M2</span><h3>The SSE Training Pipeline</h3><span class=meta>7 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="videos/M2_The_SSE_Training_Pipeline.mp4"></video><div class=cap>M2_The_SSE_Training_Pipeline.mp4</div></div><div><p>Daily sheet, shadow sheet, trainer assessment, final sign-off - and who owns each one.</p><img class=thumb src="images/ShadowSheet_BLANK-1.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M3</span><h3>Grading Rubrics</h3><span class=meta>10 questions &middot; pass 90%</span></div><div class=bd><div><video controls preload=metadata src="videos/M3_Grading_Rubrics.mp4"></video><div class=cap>M3_Grading_Rubrics.mp4</div></div><div><p>Y, N and NA as the manual defines them. Graded hardest, because inconsistent grading is the problem this program exists to fix.</p><img class=thumb src="images/Daily_Sheet_EXAMPLE_INCORRECT-1.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M4</span><h3>The Coaching Model</h3><span class=meta>6 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="videos/M4_The_Coaching_Model.mp4"></video><div class=cap>M4_The_Coaching_Model.mp4</div></div><div><p>Name it, explain the risk, demonstrate, watch them repeat it. Every N, in the field, on the spot.</p><img class=thumb src="images/DailySheet_BLANK-2.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M5</span><h3>Escalation Triggers</h3><span class=meta>8 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="videos/M5_Escalation_Triggers.mp4"></video><div class=cap>M5_Escalation_Triggers.mp4</div></div><div><p>What escalates, to whom, and how fast. Reckless behavior does not wait for the end of the shift.</p><img class=thumb src="images/TrainerAssessment_BLANK-1.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M6</span><h3>Documentation Standards</h3><span class=meta>6 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="videos/M6_Documentation_Standards.mp4"></video><div class=cap>M6_Documentation_Standards.mp4</div></div><div><p>Same day, on the truck, every comment box filled. If EHS cannot find it, it was never verified.</p><img class=thumb src="images/Daily_Sheet_EXAMPLE_CORRECT-5.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M7</span><h3>Item-by-Item Y Standards</h3><span class=meta>12 questions &middot; pass 80%</span></div><div class=bd><div><video controls preload=metadata src="videos/M7_Item_By_Item_Y_Standards.mp4"></video><div class=cap>M7_Item_By_Item_Y_Standards.mp4</div></div><div><p>What a Y actually requires, line by line, across the Daily and Shadow sheets.</p><img class=thumb src="images/DailySheet_BLANK-3.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div><div class=mod><div class=hd><span class=cd>M8</span><h3>Final Scenario Exam</h3><span class=meta>15 questions &middot; pass 85%</span></div><div class=bd><div><div class=novid>Written exam &mdash; no video</div></div><div><p>Mixed scenarios drawing on everything above. The last gate before the live evaluation. Written exam - no video.</p><img class=thumb src="images/FinalSignOff_BLANK-1.png" alt="form page"><div class=cap>On-screen reference</div></div></div></div>
+<footer>TITAN ENERGY TRANSPORTATION &middot; EHS &middot; MENTOR QUALIFICATION PROGRAM &middot; DRAFT</footer>
+</div>
+
+</body>
+</html>
