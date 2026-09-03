@@ -78,9 +78,9 @@ input[type=number]:focus{border-color:var(--cyan);}
 <label>Tank strapping (barrels per inch)</label>
 <div class="field"><input type="number" id="bpi" min="0.1" step="0.01" inputmode="decimal" value="1.67"><span>bbl / in</span></div>
 <div class="chips" id="bpichips">
-  <div class="chip on" data-v="1.67">1.67 &mdash; standard</div><div class="chip" data-v="1.17">1.17</div>
+  <div class="chip on" data-v="1.67" data-pad="">1.67 &mdash; standard</div><div class="chip" data-v="1.17" data-pad="Whitacre 701">1.17 &mdash; Whitacre 701 (Gulfport)</div>
 </div>
-<div class="hint">Most 500-bbl tanks are 1.67 bbl per inch. Some pads are strapped differently &mdash; if a pad card shows a different factor, use it here.</div>
+<div class="hint"><b>Whitacre 701 is strapped at 1.17 bbl per inch</b>, not the standard 1.67 &mdash; pick it here or open the calculator from the Whitacre 701 card. Most other 500-bbl tanks are 1.67. If a pad card shows a different factor, use it.</div>
 </div>
 
 <div id="verdict"></div>
@@ -169,6 +169,7 @@ function chipRow(rowId, inputId){
   });
 }
 chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks'); chipRow('bpichips','bpi');
+$('bpichips').addEventListener('click', e=>{ const c=e.target.closest('.chip'); if(c){ $('bpiPad').textContent = c.dataset.pad || 'this pad'; syncBpi(); } });
 $('tanks').addEventListener('input', ()=>{ renderTanks(); calc(); });
 document.getElementById('tankchips').addEventListener('click', ()=>{ renderTanks(); calc(); });
 // prefill from ?buffer=30&load=130
