@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v16';
+const VER = 'titan-v17';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
