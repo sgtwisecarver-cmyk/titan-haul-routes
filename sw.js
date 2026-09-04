@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v19';
+const VER = 'titan-v20';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -7,7 +7,8 @@ const SHELL = [
   './icon-192.png', './icon-512.png', './icon-180.png', './img/titan-logo.png', './img/favicon.png',
   './info/about.html', './info/contact.html', './info/calculator.html',
   './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html',
-  './info/safety-video.html', './info/project.html'
+  './info/safety-video.html', './info/project.html',
+  './info/eog-loading-sop.html', './info/gulfport-loading-sop.html', './info/gulfport-offload-sop.html'
 ];
 
 self.addEventListener('install', e => {
