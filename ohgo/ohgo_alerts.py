@@ -15,6 +15,7 @@ import os, re, json, math, sys, urllib.request, datetime
 # ---------------- CONSTANTS (tune these) ----------------
 OHGO_BASE      = "https://publicapi.ohgo.com/api/v1"
 PROX_MI        = 6.0     # per-pad: event must be within this many miles of the pad
+FRAC_SITE_MI   = 1.0      # frac cards inherit alerts from pad cards within this distance (same site)
 INTERSTATE_MI  = 1.5     # per-pad: an interstate event only counts if basically on top of the pad
 APPROACH_STEPS = 3       # per-pad: last N turns = the "local approach"
 WX_MI          = 15.0    # per-pad: how far to look for a weather station
@@ -79,7 +80,7 @@ def load_pads(path):
         for s in seqs:
             r,_=_toks(" ".join(s[-APPROACH_STEPS:])); appr|=r
             r2,n=_toks(" ".join(s)); names|=n; allroutes|=r2
-        pads.append({'id':d.get('id') or normid(d['src']+'-'+d['pad']),'pad':d['pad'],'lat':d['lat'],'lon':d['lon'],
+        pads.append({'id':d.get('id') or normid(d['src']+'-'+d['pad']),'pad':d['pad'],'src':d.get('src',''),'lat':d['lat'],'lon':d['lon'],
                      'appr':appr,'names':names,'routes':allroutes,'has_route':bool(seqs)})
     return pads
 
@@ -375,7 +376,15 @@ def main():
         h=match_alerts(pads,rows,cat,now)
         print(f"  {cat}: {len(rows)} events -> {sum(len(v) for v in h.values())} matches on {len(h)} pads")
         for k,v in h.items(): allhits.setdefault(k,[]).extend(v)
+    # a frac is the same physical site as its pad card: any alert on a pad within FRAC_SITE_MI applies to the frac too
+    fracs=[p for p in pads if p['src']=='Frac']
+    for f in fracs:
+        for p in pads:
+            if p['src']=='Frac' or p['id'] not in allhits: continue
+            if haversine_mi(f['lat'],f['lon'],p['lat'],p['lon'])<=FRAC_SITE_MI:
+                allhits.setdefault(f['id'],[]).extend(allhits[p['id']])
     for k in allhits: allhits[k]=list(dict.fromkeys(allhits[k]))[:4]
+    print(f"  frac inheritance: {sum(1 for f in fracs if f['id'] in allhits)} of {len(fracs)} fracs carry alerts")
     padx=pad_extras(pads,fx,now)
     print(f"  pad extras: work zones on {sum(1 for x in padx.values() if 'wz' in x)} pads, weather hazards on {sum(1 for x in padx.values() if 'wx' in x)}, cameras on {sum(1 for x in padx.values() if 'cam' in x)}")
     corridors=build_corridors(fx,now)
