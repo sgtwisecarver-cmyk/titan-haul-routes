@@ -21,7 +21,7 @@ input[type=number]:focus{border-color:var(--cyan);}
 #verdict.ok{display:block;background:rgba(62,207,142,.15);border:2px solid var(--green);color:var(--green);}
 #verdict.no{display:block;background:rgba(224,49,49,.13);border:2px solid var(--red);color:#ff8a8a;}
 #verdict small{display:block;font-weight:600;font-size:13px;margin-top:6px;color:var(--dim);}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;}
 .stat{background:var(--card2);border-radius:10px;padding:10px 12px;}
 .stat .v{font-size:19px;font-weight:800;color:var(--cyan);} .stat .l{font-size:11.5px;color:var(--dim);font-weight:700;text-transform:uppercase;letter-spacing:.3px;}
 .hint{font-size:12.5px;color:var(--dim);margin-top:10px;}
@@ -44,18 +44,13 @@ input[type=number]:focus{border-color:var(--cyan);}
 <div class="card">
 <div id="singleTank">
 <label>Interface level (top of water)</label>
+<div class="hint" style="margin:-2px 0 8px">The top level on the gauge includes both oil and water. The <b>interface</b> is the top of the water &mdash; that&rsquo;s the number you figure your load from.</div>
 <div class="row">
   <div class="field"><input type="number" id="int_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
   <div class="field"><input type="number" id="int_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
 </div>
 </div>
 <div id="multiTank" style="display:none"></div>
-<div id="topSection">
-<label>Top level (top of oil) — optional</label>
-<div class="row">
-  <div class="field"><input type="number" id="top_ft" min="0" inputmode="decimal" placeholder="0"><span>ft</span></div>
-  <div class="field"><input type="number" id="top_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div>
-</div>
 </div>
 <label>Tank buffer (must stay in tank)</label>
 <div class="field"><input type="number" id="buf" min="0" inputmode="decimal" placeholder="30"><span>in</span></div>
@@ -89,9 +84,8 @@ input[type=number]:focus{border-color:var(--cyan);}
     <div class="stat"><div class="v" id="s_usable">–</div><div class="l">Water above buffer</div></div>
     <div class="stat"><div class="v" id="s_bbls">–</div><div class="l">Available bbls</div></div>
     <div class="stat"><div class="v" id="s_need">–</div><div class="l">Min interface for load</div></div>
-    <div class="stat"><div class="v" id="s_oil">–</div><div class="l">Oil on top</div></div>
   </div>
-  <div class="hint">Interface = top of the water. Top level = top of the oil sitting on the water. Oil on top = top level &minus; interface. Available water = interface &minus; buffer, at the strapping factor set above <b>per tank</b> (1.67 bbl per inch is standard). Equalized tanks are connected, but oil sitting on top pushes that tank's water interface DOWN &mdash; so gauge every tank and the calculator uses the LOWEST one, since it reaches the buffer first. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
+  <div class="hint">Interface = top of the water. Available water = interface &minus; buffer, at the strapping factor set above <b>per tank</b> (1.67 bbl per inch is standard). Equalized tanks are connected, but oil sitting on top pushes that tank's water interface DOWN &mdash; so gauge every tank and the calculator uses the LOWEST one, since it reaches the buffer first. If tanks are NOT equalized (valved off), figure each tank separately with 1 tank selected.</div>
 </div>
 
 <script>
@@ -104,7 +98,6 @@ function tankCount(){ return Math.max(1, Math.min(8, parseInt($('tanks').value)|
 function renderTanks(){
   const n = tankCount();
   $('singleTank').style.display = n===1 ? '' : 'none';
-  $('topSection').style.display = n===1 ? '' : 'none';
   const mt = $('multiTank');
   mt.style.display = n===1 ? 'none' : '';
   if(n>1){
@@ -126,7 +119,6 @@ function calc(){
   const rate = bpi() * n; syncBpi();
   const buf  = parseFloat($('buf').value);
   const load = parseFloat($('load').value);
-  const top  = inches($('top_ft').value, $('top_in').value);
   const v = $('verdict'), sc = $('statsCard');
   let intf = 0, lowTank = 0;
   if(n===1){
@@ -148,7 +140,6 @@ function calc(){
   $('s_usable').textContent = (usable >= 0 ? fmtFtIn(usable) : '0"') + (n>1 ? ' (Tank '+lowTank+')' : '');
   $('s_bbls').textContent = Math.floor(bbls) + " bbl";
   $('s_need').textContent = (!isNaN(load) && load>0) ? fmtFtIn(buf + load/rate) : "–";
-  $('s_oil').textContent = (n===1 && top > intf) ? fmtFtIn(top - intf) : (n===1 && top>0 ? 'check gauges' : '–');
   if(isNaN(load) || load<=0){ v.className=''; return; }
   const lowNote = n>1 ? ' Tank '+lowTank+' has the lowest water — it hits the buffer first and sets the limit.' : '';
   if(bbls >= load){
