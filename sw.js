@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v21';
+const VER = 'titan-v22';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -35,14 +35,18 @@ self.addEventListener('fetch', e => {
     // route maps: cache-first, cache as opened
     e.respondWith(
       caches.open(PDFS).then(c => c.match(e.request).then(hit => hit ||
-        fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; })
+        // cache:'no-cache' = always ask GitHub "is there a newer copy?" (cheap 304 if not), so a phone never
+    // shows a stale page for the ~10 min GitHub Pages lets browsers reuse it
+    fetch(e.request, {cache: 'no-cache'}).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; })
       ))
     );
     return;
   }
   // app shell: network-first so updates land, cache fallback offline
   e.respondWith(
-    fetch(e.request).then(res => {
+    // cache:'no-cache' = always ask GitHub "is there a newer copy?" (cheap 304 if not), so a phone never
+    // shows a stale page for the ~10 min GitHub Pages lets browsers reuse it
+    fetch(e.request, {cache: 'no-cache'}).then(res => {
       if (res.ok) { const copy = res.clone(); caches.open(CORE).then(c => c.put(e.request, copy)); }
       return res;
     }).catch(() =>
