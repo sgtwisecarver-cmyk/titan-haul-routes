@@ -1,9 +1,9 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v22';
+const VER = 'titan-v23';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
-  './', './index.html', './manifest.json',
+  './', './index.html', './manifest.json', './data/approaches.json',
   './icon-192.png', './icon-512.png', './icon-180.png', './img/titan-logo.png', './img/favicon.png',
   './info/about.html', './info/contact.html', './info/calculator.html',
   './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html',
