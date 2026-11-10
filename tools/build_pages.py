@@ -156,6 +156,10 @@ h3{font-size:15px;margin:16px 0 4px;}
 ul.plain{list-style:none;padding:0;margin:4px 0;} ul.plain li{padding:6px 0;border-bottom:1px solid var(--line);font-size:14.5px;} ul.plain li:last-child{border-bottom:0;}
 .dim{color:var(--dim);font-size:13.5px;} a{color:var(--accent);}
 .hire{background:linear-gradient(160deg,#0d1338,#1e2a78);color:#fff;border-radius:12px;padding:14px 16px;margin:26px 0 10px;}
+.hire .yards{font-size:13.5px;opacity:.9;}
+.callbar{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:26px 0 0;font-size:14.5px;}
+.callbar a{display:flex;align-items:center;min-height:44px;font-weight:700;text-decoration:none;font-size:16px;}
+.hire{margin-top:10px !important;}
 .hire a{color:#fff;background:#d21f2c;padding:9px 14px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;margin-top:8px;}
 .az{columns:2;column-gap:20px;} .az a{display:block;padding:3px 0;text-decoration:none;font-size:14px;break-inside:avoid;}
 @media (max-width:480px){.az{columns:1;}}
@@ -193,7 +197,10 @@ def page(title, desc, path, body, jsonld=None):
             '<img src="../img/titan-logo.png" alt="Titan Energy Transportation LLC" width="120" height="36"></a>'
             '<a class="hback" href="../index.html">&larr; Route lookup</a></div>'
             + body +
-            '<div class="hire"><b>Now hiring oil &amp; water haulers</b> — Titan Energy Transportation, eastern Ohio.<br>'
+            '<div class="callbar">Questions on this route? <a href="tel:+17404335399" data-goatcounter-click="call-padpage" '
+            'data-goatcounter-title="Call dispatch (pad page)">&#128222; Call 24/7 Dispatch &mdash; (740) 433-5399</a></div>'
+            '<div class="hire"><b>Now hiring oil &amp; water haulers</b> — Titan Energy Transportation.<br>'
+            '<span class="yards">Yards in Barnesville, Cambridge, Coshocton, New Philadelphia, Newcomerstown, Sardis, Sherrodsville and East Canton, Ohio.</span><br>'
             f'<a href="{APPLY}" target="_blank" rel="noopener" data-goatcounter-click="apply-padpage" data-goatcounter-title="Apply click (pad page)">Apply to drive for Titan &rarr;</a></div>'
             '<footer>Haul routes come from the operators\' own RUMA and route documents, with well records from the Ohio Department of Natural Resources. '
             'Always follow the approved haul route and verify with dispatch before your first haul to a new pad. '
