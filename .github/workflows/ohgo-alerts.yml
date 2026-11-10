@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  actions: write
 concurrency:
   group: ohgo-alerts
   cancel-in-progress: false
@@ -21,6 +22,8 @@ jobs:
           OHGO_API_KEY: ${{ secrets.OHGO_API_KEY }}
         run: python ohgo/ohgo_alerts.py
       - name: Commit if changed
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           if ! git diff --quiet -- alerts.json; then
             git config user.name  "titan-ohgo-bot"
@@ -28,6 +31,7 @@ jobs:
             git add alerts.json
             git commit -m "OHGO alerts refresh"
             git push
+            gh workflow run pages.yml --ref main   # publish the new alerts (bot pushes do not trigger push runs)
           else
             echo "no change"
           fi
