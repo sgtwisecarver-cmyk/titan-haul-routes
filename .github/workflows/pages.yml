@@ -1,6 +1,6 @@
 # Publishes the site to GitHub Pages (titanenergytech.com).
-# Replaces GitHub's built-in "pages build and deployment", whose deploy step gives up after 10 minutes;
-# GitHub's Pages sync has been running slow (Nov 2026), so this one waits up to 30.
+# Replaces GitHub's built-in "pages build and deployment". GitHub caps the deploy wait at 10 minutes
+# (a longer timeout is ignored), so when GitHub's Pages sync is slow a run can still time out; the next push retries.
 # Runs on every push to main, and when the OHGO alerts job commits a new alerts.json
 # (its pushes use the built-in token, which can't trigger a push run, so it calls this one directly).
 name: Publish site
@@ -32,5 +32,3 @@ jobs:
           path: .
       - id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          timeout: 1800000
