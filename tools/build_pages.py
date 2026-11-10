@@ -159,6 +159,11 @@ ul.plain{list-style:none;padding:0;margin:4px 0;} ul.plain li{padding:6px 0;bord
 .hire a{color:#fff;background:#d21f2c;padding:9px 14px;border-radius:8px;font-weight:700;text-decoration:none;display:inline-block;margin-top:8px;}
 .az{columns:2;column-gap:20px;} .az a{display:block;padding:3px 0;text-decoration:none;font-size:14px;break-inside:avoid;}
 @media (max-width:480px){.az{columns:1;}}
+.azsw{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0 12px;}
+.azsw button{min-height:44px;padding:0 16px;background:var(--card);border:0;color:var(--text);font:inherit;font-weight:700;cursor:pointer;}
+.azsw button+button{border-left:1px solid var(--line);}
+.azsw button[aria-pressed="true"]{background:#1e2a78;color:#fff;}
+[hidden]{display:none!important;}
 footer{margin-top:24px;font-size:12.5px;color:var(--dim);}
 """
 
@@ -274,21 +279,44 @@ def pad_page(d, located):
 
 
 def az_page(cards):
-    groups = {}
+    """All pads, two ways on one page: by customer and by county (a switch at the top; the phone remembers)."""
+    by_name = lambda d: norm(d['pad'])
+
+    def section(prefix, groups, order, label, sub):
+        out = ['<div class="box">' + ' · '.join(f'<a href="#{prefix}{slug(g)}">{e(label(g))}</a>' for g in order) + '</div>']
+        for g in order:
+            out.append(f'<h2 id="{prefix}{slug(g)}">{e(label(g))} ({len(groups[g])})</h2><div class="az">' + ''.join(
+                f'<a href="{e(d["_id"])}.html">{e(d["pad"])} <span class="dim">{e(sub(d))}</span></a>'
+                for d in sorted(groups[g], key=by_name)) + '</div>')
+        return ''.join(out)
+
+    county, cust = {}, {}
     for d in cards:
-        groups.setdefault(d.get('county') or 'County not listed', []).append(d)
-    order = sorted(groups, key=lambda c: (c == 'County not listed', c))
+        county.setdefault(d.get('county') or 'County not listed', []).append(d)
+        cust.setdefault(d['src'], []).append(d)
+    county_order = sorted(county, key=lambda c: (c == 'County not listed', c))
+    src_order = ['Ascent', 'EOG', 'Gulfport', 'Infinity', 'Expand', 'Tiburon', 'Frac', 'Disposal']
+    cust_order = sorted(cust, key=lambda c: (src_order.index(c) if c in src_order else 99, c))
+    cust_label = lambda c: {'Frac': 'Active fracs', 'Disposal': 'Disposal sites'}.get(c, OPERATOR_NAMES.get(c, c))
     b = ['<h1>All pads A–Z</h1>',
          f'<div class="meta">{len(cards):,} pads, disposal sites and active fracs across eastern Ohio and nearby West Virginia and Pennsylvania — '
          'EOG, Ascent, Gulfport, Infinity, Expand and Tiburon. Pick one for its haul route and directions.</div>',
-         '<div class="box">' + ' · '.join(f'<a href="#{slug(c)}">{e(c)}</a>' for c in order) + '</div>']
-    for c in order:
-        b.append(f'<h2 id="{slug(c)}">{e(c)} ({len(groups[c])})</h2><div class="az">' + ''.join(
-            f'<a href="{e(d["_id"])}.html">{e(d["pad"])} <span class="dim">{e(operator(d) or d["src"])}</span></a>'
-            for d in sorted(groups[c], key=lambda d: norm(d['pad']))) + '</div>')
+         '<div class="azsw" role="group" aria-label="Group the list">'
+         '<button type="button" data-by="cust" aria-pressed="false">By customer</button>'
+         '<button type="button" data-by="county" aria-pressed="true">By county</button></div>',
+         '<div id="by-county">' + section('', county, county_order, lambda c: c, lambda d: operator(d) or d['src']) + '</div>',
+         '<div id="by-cust" hidden>' + section('c-', cust, cust_order, cust_label, lambda d: (d.get('county') or '').replace(' County', '')) + '</div>',
+         # the switch: plain page first (works with no script), then the phone's last choice
+         "<script>(function(){var bs=document.querySelectorAll('.azsw button'),A=document.getElementById('by-county'),B=document.getElementById('by-cust');"
+         "function set(by,save){A.hidden=by==='cust';B.hidden=by!=='cust';bs.forEach(function(x){x.setAttribute('aria-pressed',String(x.dataset.by===by));});"
+         "if(save){try{localStorage.setItem('titan_az',by);}catch(e){}}}"
+         "bs.forEach(function(x){x.addEventListener('click',function(){set(x.dataset.by,true);});});"
+         "var by='county';try{if(localStorage.getItem('titan_az')==='cust')by='cust';}catch(e){}"
+         "if(/^#c-/.test(location.hash))by='cust';set(by,false);"
+         "if(location.hash){var t=document.getElementById(location.hash.slice(1));if(t)t.scrollIntoView();}})();</script>"]
     desc = (f"Every approved haul route Titan Energy Transportation drivers use — {len(cards):,} well pads, disposal sites and "
-            "frac locations in eastern Ohio, West Virginia and Pennsylvania, listed by county.")
-    return page('All pads A–Z — haul routes by county', desc, 'pad/', ''.join(b))
+            "frac locations in eastern Ohio, West Virginia and Pennsylvania, listed by customer and by county.")
+    return page('All pads A–Z — haul routes by customer and county', desc, 'pad/', ''.join(b))
 
 
 def main():
