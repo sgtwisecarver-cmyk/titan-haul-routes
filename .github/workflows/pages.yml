@@ -8,6 +8,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "20 5 * * *"   # ~00:20 Eastern: rebuild pad pages so frac cards past their "until" date drop off
 permissions:
   contents: read
   pages: write
@@ -26,6 +28,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: main
+      - name: Build pad pages + sitemap (one Google-listable page per pad card)
+        run: python3 tools/build_pages.py
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
