@@ -199,9 +199,9 @@ def page(title, desc, path, body, jsonld=None):
             + body +
             '<div class="callbar">Questions on this route? <a href="tel:+17404335399" data-goatcounter-click="call-padpage" '
             'data-goatcounter-title="Call dispatch (pad page)">&#128222; Call 24/7 Dispatch &mdash; (740) 433-5399</a></div>'
-            '<div class="hire"><b>Now hiring oil &amp; water haulers</b> — Titan Energy Transportation.<br>'
+            '<div class="hire">Anyone can haul water. <b>Only the best ride for the brand!</b><br>'
             '<span class="yards">Yards in Barnesville, Cambridge, Coshocton, New Philadelphia, Newcomerstown, Sardis, Sherrodsville and East Canton, Ohio.</span><br>'
-            f'<a href="{APPLY}" target="_blank" rel="noopener" data-goatcounter-click="apply-padpage" data-goatcounter-title="Apply click (pad page)">Apply to drive for Titan &rarr;</a></div>'
+            f'<a href="{APPLY}" target="_blank" rel="noopener" data-goatcounter-click="apply-padpage" data-goatcounter-title="Apply click (pad page)">Apply here &rarr;</a></div>'
             '<footer>Haul routes come from the operators\' own RUMA and route documents, with well records from the Ohio Department of Natural Resources. '
             'Always follow the approved haul route and verify with dispatch before your first haul to a new pad. '
             '<a href="index.html">All pads A–Z</a> · <a href="../info/about.html">About this site</a> · <a href="../info/contact.html">Contact dispatch</a></footer>'
