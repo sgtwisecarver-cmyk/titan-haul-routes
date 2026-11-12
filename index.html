@@ -1388,8 +1388,9 @@ function refreshPads(){
   if(!MAP || !MAP.getSource('pads')) return 0;
   const hits = mapHits(), g = padsGeo(hits);
   MAP.getSource('pads').setData(g);
-  const what = srcFilter==="ALERTS" ? 'pads with a road alert' : srcFilter==="Frac" ? 'active fracs'
-             : srcFilter==="Disposal" ? 'disposal sites' : srcFilter!=="ALL" ? srcFilter+' pads' : 'pads';
+  const one = g.features.length===1;
+  const what = srcFilter==="ALERTS" ? (one?'pad':'pads')+' with a road alert' : srcFilter==="Frac" ? 'active frac'+(one?'':'s')
+             : srcFilter==="Disposal" ? 'disposal site'+(one?'':'s') : (srcFilter!=="ALL" ? srcFilter+' ' : '')+(one?'pad':'pads');
   document.getElementById('mapCount').textContent = g.features.length.toLocaleString()+' '+what+(qEl.value.trim() ? ' matching “'+qEl.value.trim()+'”' : '');
   return g;
 }
