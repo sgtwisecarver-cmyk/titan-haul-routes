@@ -228,8 +228,11 @@ def pad_page(d, located):
          f"<h1>{e(d['pad'])}</h1>"]
     meta = [x for x in [opname if kind(d) != 'disposal' else (('Disposal' + (' · ' + opname if opname else ''))), where] if x]
     b.append('<div class="meta">' + e(' · '.join(meta)) + '</div>')
-    if d.get('alert'):
-        b.append('<div class="warn">🚧 <b>Road alert:</b> ' + e(d['alert']) + '</div>')
+    al = d.get('alert')                          # one string, or a list of {t, added, temp, from} (v31.7)
+    for a in (al if isinstance(al, list) else [al] if al else []):
+        t = a if isinstance(a, str) else (a or {}).get('t')
+        if t:
+            b.append('<div class="warn">🚧 <b>Road alert:</b> ' + e(t) + '</div>')
     b.append('<div class="btns">'
              f'<a class="btn go" href="{e(lookup)}">🧭 Open in the route lookup — Navigate, map &amp; calculator</a>')
     docs = d.get('docs') or ([{'url': d['url'], 'label': 'Traffic Control Plan' if d['src'] == 'Frac' else 'Route map'}] if d.get('url') else [])

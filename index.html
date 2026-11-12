@@ -558,7 +558,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.6 — Nov 2026";
+const VERSION = "v31.7 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -656,7 +656,8 @@ let APPROACHES = {};
   // a card opened before this arrived (shared link, quick tap) is rebuilt so it shows its truck route
   document.querySelectorAll('.item[data-id]').forEach(el=>{ const b=el.querySelector('.body'), d=BYID[el.dataset.id]; if(b && d && APPROACHES[d._id]) b.replaceWith(body(d)); });
 }).catch(()=>{}); })();
-function alertsFor(d){ const a=[]; if(d.alert) a.push(d.alert); const au=AUTO_ALERTS[d._id]; if(au&&au.length) au.forEach(x=>a.push(x)); return a; }
+// d.alert: one string, or a list of {t, added, temp, from} (v31.7: EOG traffic notes, dated so temporary ones can be found)
+function alertsFor(d){ const a=[]; if(d.alert) (Array.isArray(d.alert)?d.alert:[d.alert]).forEach(x=>{ const t=typeof x==="string"?x:(x&&x.t); if(t) a.push(t); }); const au=AUTO_ALERTS[d._id]; if(au&&au.length) au.forEach(x=>a.push(x)); return a; }
 function updateAlertChip(){ const n=DATA.filter(d=>alertsFor(d).length).length; const c=document.querySelector('.chip.alertchip'); if(c){ c.style.display=n?'':'none'; c.innerHTML='⚠ <span class="wide">Alerts </span>'+n; c.setAttribute('aria-label', n+' pads with a road alert'); } }
 // road alerts (v30.5): the Cloudflare alerts Worker builds them from OHGO every 10 minutes, off the site's deploy path.
 // Asked for in order - the Worker, then the site's own alerts.json (refreshed on every publish) - and whichever

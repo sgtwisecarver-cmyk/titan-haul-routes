@@ -7,6 +7,10 @@
 Splitting by customer means a one-pad edit makes phones download that customer's file, not every pad.
 A card id is d.id or slug(src + "-" + pad), the same as the site.
 
+Road alerts on a card: `alert` is one string, or a list of {"t": text, "added": "YYYY-MM-DD", "temp": bool,
+"from": where it came from} (v31.7). Both show as ROAD ALERT boxes at the top of the card. To clear temporary
+traffic control later, look for "temp": true and its "added" date.
+
 Use from Python:
     sys.path.insert(0, "<site repo>/tools"); import pads
     cards = pads.load_cards(site_root)      # every card, in list order (hidden / expired cards included)
