@@ -12,3 +12,12 @@ site), and the service worker keeps the last copy of each for no signal. Alerts 
 compares the two on the same OHGO snapshot. Deploy the Worker from a folder outside OneDrive (wrangler's bundler
 can't read the OneDrive parent folders): copy `src/`, `wrangler.jsonc`, `package.json` to C:\dev and run
 `npx wrangler deploy`. The OHGO key is a Worker secret (`npx wrangler secret put OHGO_API_KEY`), never in git.
+
+## Pad cards (v30.6)
+The cards live in `data/pads/<customer>.json` (one card per line) plus `data/pads/index.json` (the list order),
+not inside index.html. `tools/pads.py` loads and saves them (`load_cards` / `save_cards`) and `python tools/pads.py
+check` makes the manifest agree with the files (the publish job runs it too). The page paints at once and starts
+the downloads from `<head>`; the service worker precaches the files and serves them stale-while-revalidate,
+telling the page when a file changed so it reloads at a quiet moment. A one-pad edit costs phones one customer
+file (EOG ~80 KB gzipped, fracs ~5 KB) instead of the whole 300 KB page. If you add a customer file, add it to
+`FILES` in tools/pads.py, `KNOWN` in index.html's head loader and the sw.js SHELL.

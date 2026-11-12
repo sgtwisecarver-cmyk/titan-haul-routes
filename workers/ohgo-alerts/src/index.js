@@ -3,7 +3,7 @@
 //   GET /alerts.json   the latest copy, CORS open, cached 60 s at the edge and in browsers
 //   GET /health        when it last ran, how it went
 // A failed run keeps serving the last good copy. Secret: OHGO_API_KEY (wrangler secret put). Vars: PADS_URL.
-import { buildAlerts, dataFromIndex, fetchAllLive } from './ohgo.js';
+import { buildAlerts, dataFromIndex, fetchAllLive, mergePads } from './ohgo.js';
 
 const KEY = 'alerts.json', META = 'meta';
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS' };
@@ -12,9 +12,16 @@ async function loadPadData(env) {
   const r = await fetch(env.PADS_URL, { cf: { cacheTtl: 300 } });
   if (!r.ok) throw new Error(`pads ${env.PADS_URL}: HTTP ${r.status}`);
   const text = await r.text();
-  // data/pads.json (an array, or {pads:[...]}) once the site splits its data out; index.html until then
-  if (/^\s*[\[{]/.test(text)) { const j = JSON.parse(text); return Array.isArray(j) ? j : j.pads; }
-  return dataFromIndex(text);
+  if (!/^\s*[\[{]/.test(text)) return dataFromIndex(text);        // an old site: DATA inside index.html
+  const j = JSON.parse(text);
+  if (Array.isArray(j)) return j;
+  // data/pads/index.json (v30.6): fetch each customer's file next to it
+  const parts = await Promise.all(j.files.map(async (f) => {
+    const u = new URL(f + '.json', env.PADS_URL), q = await fetch(u, { cf: { cacheTtl: 300 } });
+    if (!q.ok) throw new Error(`pads ${u}: HTTP ${q.status}`);
+    return q.json();
+  }));
+  return mergePads(j, parts);
 }
 
 async function run(env) {

@@ -29,6 +29,8 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: main
+      - name: Pad cards - manifest and customer files agree (files any card added without the manifest)
+        run: python3 tools/pads.py check
       - name: Build pad pages + sitemap (one Google-listable page per pad card)
         run: python3 tools/build_pages.py
       - name: Fallback road alerts - copy the alerts Worker's latest alerts.json (keeps the repo copy if it fails)

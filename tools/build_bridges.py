@@ -29,9 +29,10 @@ POSTED = {"P", "R"}
 
 
 def pads_bbox(pad=0.3):
-    s = (ROOT / "index.html").read_text(encoding="utf-8").split("\n")
-    line = next(x for x in s if x.startswith("const DATA = "))
-    data = json.loads(line[line.index("["):line.rindex("]") + 1])
+    import sys
+    sys.path.insert(0, str(ROOT / "tools"))
+    import pads   # data/pads/*.json (v30.6)
+    data = pads.load_cards(str(ROOT))
     la = [d["lat"] for d in data if d.get("lat")]
     lo = [d["lon"] for d in data if d.get("lon")]
     return min(la) - pad, max(la) + pad, min(lo) - pad, max(lo) + pad

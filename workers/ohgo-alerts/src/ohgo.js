@@ -78,7 +78,16 @@ export function loadPads(data) {
   }
   return pads;
 }
-// DATA out of index.html (until the pads live in their own file)
+// the site's cards (v30.6): data/pads/index.json {files, order} + one array per customer file, merged in list
+// order exactly like the site's loader (a card the manifest doesn't list yet goes after the listed ones)
+export function mergePads(manifest, parts) {
+  const by = {}, out = [], seen = new Set();
+  for (const p of parts) for (const d of p) by[d.id || normid(d.src + '-' + d.pad)] = d;
+  for (const i of manifest.order) if (by[i] && !seen.has(i)) { seen.add(i); out.push(by[i]); }
+  for (const p of parts) for (const d of p) { const i = d.id || normid(d.src + '-' + d.pad); if (!seen.has(i)) { seen.add(i); out.push(d); } }
+  return out;
+}
+// the old layout: DATA inside index.html (sites before v30.6)
 export function dataFromIndex(html) {
   const m = html.match(/const DATA\s*=\s*(\[.*?\]);/s);
   return JSON.parse(m[1]);

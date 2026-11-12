@@ -1,12 +1,14 @@
 // Parity check: the JS port vs ohgo/ohgo_alerts.py on the same OHGO snapshot and the same pads.
-//   node workers/ohgo-alerts/test/parity.mjs <fixtures.json> <index.html> <python-output.json> [nowISO]
+//   node workers/ohgo-alerts/test/parity.mjs <fixtures.json> <site root> <python-output.json> [nowISO]
 // Prints every difference (ignoring "updated"); exits 1 if there are any.
 import { readFileSync } from 'node:fs';
-import { buildAlerts, dataFromIndex } from '../src/ohgo.js';
+import { buildAlerts, mergePads } from '../src/ohgo.js';
 
-const [fxPath, indexPath, pyPath, nowIso] = process.argv.slice(2);
+const [fxPath, root, pyPath, nowIso] = process.argv.slice(2);
 const fx = JSON.parse(readFileSync(fxPath, 'utf8'));
-const data = dataFromIndex(readFileSync(indexPath, 'utf8'));
+const rd = (f) => JSON.parse(readFileSync(`${root}/data/pads/${f}`, 'utf8'));
+const manifest = rd('index.json');
+const data = mergePads(manifest, manifest.files.map((f) => rd(f + '.json')));
 const now = nowIso ? Date.parse(nowIso + 'Z') : Date.now();
 const js = buildAlerts(data, fx, now);
 const py = JSON.parse(readFileSync(pyPath, 'utf8'));

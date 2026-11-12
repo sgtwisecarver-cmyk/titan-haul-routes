@@ -1,7 +1,7 @@
 """Build one plain HTML page per pad card so Google can list every pad, plus an A-Z pad list and sitemap.xml.
 
-The route lookup (index.html) builds its cards in the browser from the DATA array, so Google sees it as one
-page. This script reads the same DATA array and writes:
+The route lookup (index.html) builds its cards in the browser from data/pads/ (tools/pads.py), so Google sees
+it as one page. This script reads the same cards and writes:
   pad/<card id>.html   one page per card: directions, route map, wells, tanks, nearby pads, "Open in the lookup"
   pad/index.html       every pad A-Z, grouped by county
   sitemap.xml          home + info pages + pad list + every pad page
@@ -47,10 +47,9 @@ def e(s):
 
 
 def load_data():
-    src = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
-    i = src.index('const DATA = ')
-    line = src[i + len('const DATA = '):src.index('\n', i)].rstrip().rstrip(';')
-    data = json.loads(line)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import pads   # data/pads/*.json in the site's list order (v30.6)
+    data = pads.load_cards(ROOT)
     for d in data:
         d['_id'] = d.get('id') or slug(d['src'] + '-' + d['pad'])
     # same rule as the lookup: hidden cards and cards past their "until" date are off the list

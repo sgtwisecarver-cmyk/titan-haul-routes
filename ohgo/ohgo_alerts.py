@@ -64,9 +64,10 @@ def clean(s): return re.sub(r'\s+',' ',str(s or '')).strip()
 
 # ---------------- pads ----------------
 def load_pads(path):
-    html=open(path,encoding='utf-8').read()
-    m=re.search(r'const DATA\s*=\s*(\[.*?\]);', html, re.S) or re.search(r'(\[\{.*\}\]);', html, re.S)
-    data=json.loads(m.group(1))
+    # v30.6: the cards live in data/pads/ next to index.html (tools/pads.py), no longer inside it
+    root=os.path.dirname(os.path.abspath(path))
+    sys.path.insert(0, os.path.join(root,'tools')); import pads
+    data=pads.load_cards(root)
     def normid(s): return re.sub(r'\s+',' ',re.sub(r'[^a-z0-9 ]+',' ',(s or '').lower())).strip().replace(' ','-')
     pads=[]
     for d in data:

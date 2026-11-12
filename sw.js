@@ -1,10 +1,14 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v61';
+const VER = 'titan-v62';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
   './index.html', './manifest.json', './data/approaches.json',
   './vendor/maplibre-gl-4.7.1.js', './vendor/maplibre-gl-4.7.1.css', './vendor/goatcounter-count.js',
+  // the pad cards (v30.6) - keep in step with tools/pads.py FILES
+  './data/pads/index.json', './data/pads/ascent.json', './data/pads/eog.json', './data/pads/gulfport.json',
+  './data/pads/infinity.json', './data/pads/expand.json', './data/pads/tiburon.json', './data/pads/frac.json',
+  './data/pads/disposal.json',
   './icon-192.png', './icon-512.png', './icon-180.png', './img/titan-logo.png', './img/favicon.png',
   './info/about.html', './info/contact.html', './info/calculator.html',
   './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html',
@@ -36,6 +40,15 @@ function keyOf(req){
   return u.href;
 }
 
+// several pad files can change at once: one message to the open pages (awaited, so the worker stays up for it)
+let padsNote = null;
+function padsChanged() {
+  if (!padsNote) padsNote = new Promise(r => setTimeout(r, 800))
+    .then(() => self.clients.matchAll({type: 'window'}))
+    .then(cs => { cs.forEach(c => c.postMessage({type: 'pads-updated'})); padsNote = null; });
+  return padsNote;
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // road alerts come from the Cloudflare alerts Worker (v30.5): same slow-signal rule and saved copy as the shell
@@ -46,6 +59,26 @@ self.addEventListener('fetch', e => {
   // video: never cache (55MB + range/206 requests break Cache API) — let the browser stream it
   if (url.pathname.includes('/videos/')) return;
 
+  if (url.pathname.includes('/data/pads/')) {
+    // pad cards: stale-while-revalidate - the saved copy at once (no waiting on one bar of signal), a fresh one
+    // fetched behind it; if it changed, the page is told so it can show it at a quiet moment
+    const key = keyOf(e.request);
+    e.respondWith(caches.open(CORE).then(c => c.match(key).then(hit => {
+      const oldText = hit ? hit.clone().text() : null;     // read before `hit` goes to the page (its body is used then)
+      const net = fetch(e.request, {cache: 'no-cache'}).then(async res => {
+        if (res.ok) {
+          const fresh = await res.clone().text();
+          const old = oldText ? await oldText : null;
+          await c.put(key, res.clone());
+          if (old !== null && old !== fresh) await padsChanged();
+        }
+        return res;
+      });
+      if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
+      return net;
+    })));
+    return;
+  }
   if (url.pathname.includes('/pdfs/')) {
     // route maps: cache-first, cache as opened
     e.respondWith(

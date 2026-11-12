@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "compatibility_date": "2026-08-01",
   "triggers": { "crons": ["*/10 * * * *"] },
-  "vars": { "PADS_URL": "https://titanenergytech.com/index.html" },
+  "vars": { "PADS_URL": "https://titanenergytech.com/data/pads/index.json" },
   "kv_namespaces": [ { "binding": "ALERTS", "id": "145558c33e104ea4bec8c29643167af2" } ],
   "limits": { "cpu_ms": 30000 },
   "observability": { "enabled": true }
