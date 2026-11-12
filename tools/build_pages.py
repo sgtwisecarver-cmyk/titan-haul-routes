@@ -175,7 +175,16 @@ HEAD_THEME = ("<script>(function(){try{var t=localStorage.getItem('titan_theme')
               "if(t==='light'||t==='dark')document.documentElement.classList.add(t);}catch(e){}})();</script>")
 FONTS = ('<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>'
          '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;600;700&display=swap">')
-GOAT = '<script data-goatcounter="https://titanroutes.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
+GOAT = '<script data-goatcounter="https://titanroutes.goatcounter.com/count" async src="../vendor/goatcounter-count.js"></script>'
+# Content-Security-Policy for the pad pages: same rules as the info pages (inline script/style are still needed)
+CSP = ('<meta http-equiv="Content-Security-Policy" content="'
+       "default-src 'self'; script-src 'self' 'unsafe-inline'; "
+       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; "
+       "img-src 'self' data: https://titanroutes.goatcounter.com; connect-src 'self' https://titanroutes.goatcounter.com; "
+       "frame-src 'none'; worker-src 'self'; media-src 'self'; manifest-src 'self'; "
+       "base-uri 'none'; object-src 'none'; form-action 'self'"
+       '">'
+       '<meta name="referrer" content="strict-origin-when-cross-origin">')
 
 
 def page(title, desc, path, body, jsonld=None):
@@ -183,7 +192,7 @@ def page(title, desc, path, body, jsonld=None):
     ld = ''
     for block in (jsonld or []):
         ld += '<script type="application/ld+json">' + json.dumps(block, ensure_ascii=False).replace('</', '<\\/') + '</script>'
-    return ('<!DOCTYPE html><html lang="en"><head>' + HEAD_THEME +
+    return ('<!DOCTYPE html><html lang="en"><head>' + CSP + HEAD_THEME +
             '<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
             f'<title>{e(title)} | Titan Energy Transportation</title>'
             f'<meta name="description" content="{e(desc)}">'
@@ -260,7 +269,7 @@ def pad_page(d, located):
     if d.get('tanks'):
         sv = {'water': 'produced water', 'mixed': 'oil / produced water (shared)'}
         b.append('<h2>Tanks</h2><ul class="plain">' + ''.join(
-            f"<li><b>{t['n']} × {t['bbl']} bbl</b> {e(sv.get(t.get('svc'), t.get('svc')))}"
+            f"<li><b>{e(t['n'])} × {e(t['bbl'])} bbl</b> {e(sv.get(t.get('svc'), t.get('svc')))}"
             + (f" · {e(re.sub(r'\.0$', '', str(t['dia'])))}′ dia × {e(t.get('h'))}′ tall" if t.get('dia') else '') + '</li>' for t in d['tanks']) + '</ul>'
             + (f"<div class=\"dim\">{e(d['tsrc'])}</div>" if d.get('tsrc') else ''))
     if d.get('sites'):
