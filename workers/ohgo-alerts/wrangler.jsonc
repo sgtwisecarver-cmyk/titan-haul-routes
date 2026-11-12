@@ -1,0 +1,13 @@
+{
+  // titan-ohgo-alerts: OHGO road alerts for titanenergytech.com, served from Cloudflare so alert updates never
+  // redeploy the site (Phase 3, v30.5). Deploy:  npx wrangler deploy  (then  npx wrangler triggers deploy)
+  // Secret (never in git):  npx wrangler secret put OHGO_API_KEY
+  "name": "titan-ohgo-alerts",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-01",
+  "triggers": { "crons": ["*/10 * * * *"] },
+  "vars": { "PADS_URL": "https://titanenergytech.com/index.html" },
+  "kv_namespaces": [ { "binding": "ALERTS", "id": "145558c33e104ea4bec8c29643167af2" } ],
+  "limits": { "cpu_ms": 30000 },
+  "observability": { "enabled": true }
+}

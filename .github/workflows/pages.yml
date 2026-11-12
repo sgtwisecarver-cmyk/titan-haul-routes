@@ -1,8 +1,9 @@
 # Publishes the site to GitHub Pages (titanenergytech.com).
 # Replaces GitHub's built-in "pages build and deployment". GitHub caps the deploy wait at 10 minutes
 # (a longer timeout is ignored), so when GitHub's Pages sync is slow a run can still time out; the next push retries.
-# Runs on every push to main, and when the OHGO alerts job commits a new alerts.json
-# (its pushes use the built-in token, which can't trigger a push run, so it calls this one directly).
+# Runs on every push to main, by hand, and nightly. Road alerts no longer trigger it (v30.5): the Cloudflare
+# Worker titan-ohgo-alerts (workers/ohgo-alerts) builds and serves them every 10 minutes. This job only copies
+# the Worker's latest alerts.json into the site as the same-origin fallback.
 name: Publish site
 on:
   push:
@@ -30,6 +31,13 @@ jobs:
           ref: main
       - name: Build pad pages + sitemap (one Google-listable page per pad card)
         run: python3 tools/build_pages.py
+      - name: Fallback road alerts - copy the alerts Worker's latest alerts.json (keeps the repo copy if it fails)
+        run: |
+          if curl -sf --max-time 20 https://titan-ohgo-alerts.titan-dispatch-board.workers.dev/alerts.json -o /tmp/alerts.json && python3 -c "import json;j=json.load(open('/tmp/alerts.json'));assert isinstance(j.get('alerts'),dict)"; then
+            cp /tmp/alerts.json alerts.json; echo "alerts.json from the Worker"
+          else
+            echo "::warning::alerts Worker unreachable - publishing the repo's alerts.json"
+          fi
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3.0.1
         with:

@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v60';
+const VER = 'titan-v61';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -14,6 +14,7 @@ const SHELL = [
 // one bar of signal doesn't fail a request, it hangs - after this long the phone's saved copy is shown
 // and the fresh one still lands in the cache for next time
 const SLOW_MS = 2500;
+const ALERTS = 'https://titan-ohgo-alerts.titan-dispatch-board.workers.dev/alerts.json';
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CORE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -37,7 +38,9 @@ function keyOf(req){
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  if (url.origin !== location.origin) return;          // live weather/maps: network only
+  // road alerts come from the Cloudflare alerts Worker (v30.5): same slow-signal rule and saved copy as the shell
+  const alerts = url.origin + url.pathname === ALERTS;
+  if (url.origin !== location.origin && !alerts) return;   // live weather/maps: network only
   if (e.request.method !== 'GET') return;
 
   // video: never cache (55MB + range/206 requests break Cache API) — let the browser stream it
