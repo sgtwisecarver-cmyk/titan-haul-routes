@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://server.arcgisonline.com https://basemap.nationalmap.gov; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://server.arcgisonline.com https://basemap.nationalmap.gov; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://basemap.nationalmap.gov; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://basemap.nationalmap.gov; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Titan Energy Transportation — Haul Route Lookup</title>
@@ -546,7 +546,7 @@ window.TITAN_PADS=(function(){
       <button id="offClear" class="btn flag" type="button" style="margin-top:8px">Clear saved maps</button></div>
     <div class="mvhead" style="margin-top:14px"><b>Key</b></div>
     <div class="mvkey" id="mapKey"></div>
-    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Imagery &copy; Esri &middot; Offline imagery: USGS The National Map (public domain).</div>
+    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Satellite: USGS The National Map imagery (public domain).</div>
   </div>
   <div id="mapSheet" class="mvsheet" hidden role="dialog" aria-label="Selected place"></div>
 </div>
@@ -555,7 +555,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v30.8 — Nov 2026";
+const VERSION = "v30.9 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1436,9 +1436,11 @@ function wayGeo(d){
 }
 function mapStyle(){
   if(MAPSAT) return {version:8, glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-    sources:{sat:{type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19, attribution:'Imagery © Esri'},
-             ref:{type:'raster', tiles:['https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:19}},
-    layers:[{id:'sat', type:'raster', source:'sat'}, {id:'ref', type:'raster', source:'ref'}]};
+    // v30.9: USGS The National Map imagery with road names (public domain - no usage rules, fine to keep offline).
+    // Its tiles stop at zoom 16; the map enlarges z16 beyond that.
+    sources:{sat:{type:'raster', tiles:['https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:16,
+                  attribution:'Imagery: USGS The National Map'}},
+    layers:[{id:'sat', type:'raster', source:'sat'}]};
   return 'https://tiles.openfreemap.org/styles/' + (effTheme()==='dark' ? 'dark' : 'liberty');
 }
 function loadMapLib(){
@@ -1604,6 +1606,7 @@ function openMap(focus){
       MAP = new maplibregl.Map({container:'mapbox', style:mapStyle(), bounds:OHIO_BOX, fitBoundsOptions:{padding:30},
                                 attributionControl:{compact:true}, dragRotate:false, pitchWithRotate:false, maxZoom:18});
       MAP.touchZoomRotate.disableRotation();
+      MAP.setMaxZoom(MAPSAT ? 17 : 18);   // USGS imagery stops at z16: past 17 it's only blur
       MAP.addControl(new maplibregl.NavigationControl({showCompass:false}), 'bottom-right');
       // our own locate button: MapLibre's greys itself out once location is refused, so a tap did nothing (iPhone home-screen icon)
       MAP.addControl({onAdd: ()=>{ const c=document.createElement('div'); c.className='maplibregl-ctrl maplibregl-ctrl-group';
@@ -1690,7 +1693,7 @@ document.getElementById('mapStyleSeg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   const sat = b.dataset.sat==='1'; if(sat===MAPSAT) return;
   MAPSAT = sat; lsSet('titan_mapsat', sat); paintMapUI();
-  if(MAP){ MAP.setStyle(mapStyle(), {diff:false}); MAP._titanTheme = effTheme(); }
+  if(MAP){ MAP.setStyle(mapStyle(), {diff:false}); MAP._titanTheme = effTheme(); MAP.setMaxZoom(MAPSAT ? 17 : 18); }
 });
 document.getElementById('mapBrTog').addEventListener('click', ()=>{
   MAPBR = !MAPBR; lsSet('titan_mapbridges', MAPBR); paintMapUI(); loadBridges();
@@ -1775,7 +1778,7 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // vector tiles to zoom 14 - the map draws closer zooms from them - plus its style, fonts and sprites) and the
 // satellite view from USGS imagery (public domain) to zoom 16. OpenFreeMap allows offline saves of at most 3,000
 // tiles / 50 MB, 4 requests at a time; the same pace is used for USGS. The service worker keeps them (sw.js).
-const OFM = 'https://tiles.openfreemap.org', USGS = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
+const OFM = 'https://tiles.openfreemap.org', USGS = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/';   // the same tiles the satellite view shows
 const SAVE_PARALLEL = 4, OFM_MAX_TILES = 3000, SAT_MAX_TILES = 2500, VEC_ZMIN = 8, VEC_ZMAX = 14, SAT_ZMAX = 16;
 let SAVING = false;
 function swAsk(msg, ms = 8000){

@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v64';
+const VER = 'titan-v65';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -50,15 +50,13 @@ function padsChanged() {
 }
 
 // ===== v30.8: offline map tiles =====
-// Street map (OpenFreeMap: tiles, fonts, sprites, styles) and offline satellite (USGS The National Map imagery,
-// public domain) are kept as they're viewed or saved with "Save this area", cache-first, in their own cache that
-// survives version bumps. Past TILE_CAP the least-recently-used tiles go first (an IndexedDB index of url/size/
-// last use). Esri World Imagery is never stored (its terms don't allow offline use): online it comes from Esri,
-// and when Esri can't be reached the saved USGS tile for the same spot is shown instead.
+// Street map (OpenFreeMap: tiles, fonts, sprites, styles) and the satellite view (USGS The National Map imagery,
+// public domain - v30.9 uses it everywhere, no Esri) are kept as they're viewed or saved with "Save this area",
+// cache-first, in their own cache that survives version bumps. Past TILE_CAP the least-recently-used tiles go first
+// (an IndexedDB index of url/size/last use).
 const TILES = 'titan-tiles-v1';
 const TILE_CAP = 150 * 1024 * 1024;            // bytes
 const TILE_HOSTS = ['tiles.openfreemap.org', 'basemap.nationalmap.gov'];
-const USGS_TILE = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
 const CLEAR_PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
 // no tile and no signal: an empty tile instead of an error (nothing drawn there, no red console)
 function emptyTile(url) {
@@ -133,15 +131,6 @@ function tileFetch(e, url) {
     }).catch(() => hit || emptyTile(key));
   }));
 }
-// Esri satellite: network only; no signal -> the saved USGS tile for the same z/y/x (both are web-mercator XYZ)
-function esriFetch(e, url) {
-  return fetch(e.request).catch(() => {
-    const m = url.pathname.match(/\/World_Imagery\/MapServer\/tile\/(\d+)\/(\d+)\/(\d+)/);
-    if (!m) return emptyTile(url.href);
-    const u = USGS_TILE + m[1] + '/' + m[2] + '/' + m[3];
-    return caches.open(TILES).then(c => c.match(u)).then(hit => { if (hit) e.waitUntil(touch(u)); return hit || emptyTile(u); });
-  });
-}
 self.addEventListener('message', e => {
   const d = e.data || {}, port = e.ports && e.ports[0];
   const reply = p => e.waitUntil(p.then(v => port && port.postMessage(v), err => port && port.postMessage({error: String(err)})));
@@ -155,7 +144,6 @@ self.addEventListener('fetch', e => {
   // road alerts come from the Cloudflare alerts Worker (v30.5): same slow-signal rule and saved copy as the shell
   const alerts = url.origin + url.pathname === ALERTS;
   if (e.request.method === 'GET' && TILE_HOSTS.includes(url.hostname)) { e.respondWith(tileFetch(e, url)); return; }
-  if (e.request.method === 'GET' && url.hostname === 'server.arcgisonline.com') { e.respondWith(esriFetch(e, url)); return; }
   if (url.origin !== location.origin && !alerts) return;   // live weather/maps: network only
   if (e.request.method !== 'GET') return;
 
