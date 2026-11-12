@@ -555,7 +555,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.2 — Nov 2026";
+const VERSION = "v31.3 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1192,7 +1192,15 @@ function locHelp(retry){
   LOC_RETRY = retry || null;
   const T = '<div class="lhtitle" id="lhtitle">Turn on location</div>';
   let h;
-  if(IS_IOS){
+  if(IS_IOS && IS_HOME_APP){
+    // v31.3: Safari can be fine while the icon is stuck - the icon's own answer only resets by putting the icon back
+    h = T + '<p class="wlede">Your iPhone gives the Titan Routes icon its own location answer, separate from Safari. Once the icon gets a “no,” the iPhone never asks again, even with every setting right. Put the icon back to reset it:</p>'
+      + '<ol class="lhsteps">'
+      + '<li>Press and hold the <b>Titan Routes</b> icon → <b>Remove App</b> (or <b>Delete Bookmark</b>) → confirm.</li>'
+      + '<li>Open <b>titanenergytech.com</b> in Safari → Share <b>⬆</b> → <b>Add to Home Screen</b>.</li>'
+      + '<li>Open the new icon, tap <b>📍 Nearest</b>, and tap <b>Allow</b> when the iPhone asks.</li></ol>'
+      + '<div class="wtip"><b>Still no location?</b> Settings → Privacy &amp; Security → <b>Location Services</b> On → <b>Safari Websites</b> → <b>While Using the App</b>, Precise Location on. Then Settings → Apps → Safari → <b>Location</b> → <b>Allow</b>.</div>';
+  } else if(IS_IOS){
     h = T + '<p class="wlede">' + (IS_HOME_APP
           ? 'Your iPhone keeps a separate location switch for the Titan Routes icon. Once it’s off, the iPhone won’t ask again — turn it on here:'
           : 'Safari is blocking location for this site. Turn it on here:') + '</p>'
