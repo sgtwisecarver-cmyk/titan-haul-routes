@@ -1,5 +1,7 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v65';
+const VER = 'titan-v66';
+// route maps and the safety video live on their own site (v31.0) so this one publishes fast
+const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -171,10 +173,16 @@ self.addEventListener('fetch', e => {
     return;
   }
   if (url.pathname.includes('/pdfs/')) {
-    // route maps: cache-first, cache as opened
+    // route maps: same address as always (pdfs/...), fetched from the files site, kept on the phone once opened
+    // (cache-first), so a route map opened once works with no signal
     e.respondWith(
       caches.open(PDFS).then(c => c.match(e.request).then(hit => hit ||
-        fetch(e.request).then(res => { if (res.ok) c.put(e.request, res.clone()); return res; })
+        fetch(FILES + url.pathname.slice(url.pathname.indexOf('pdfs/'))).then(async res => {
+          if (!res.ok) return res;
+          const out = new Response(await res.blob(), {status: 200, headers: {'Content-Type': 'application/pdf'}});
+          await c.put(e.request, out.clone());
+          return out;
+        })
       ))
     );
     return;

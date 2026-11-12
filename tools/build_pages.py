@@ -19,6 +19,7 @@ import re
 import sys
 
 SITE = 'https://titanenergytech.com'
+FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/'   # route-map PDFs + safety video: their own Pages site
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'pad')
 APPLY = 'https://tetransports.com/careers?utm_source=titanroutes&amp;utm_medium=pad-page&amp;utm_campaign=apply#apply'
@@ -234,7 +235,8 @@ def pad_page(d, located):
     docs = d.get('docs') or ([{'url': d['url'], 'label': 'Traffic Control Plan' if d['src'] == 'Frac' else 'Route map'}] if d.get('url') else [])
     for doc in docs:
         label = doc['label'] if d.get('docs') is None else doc['label'] + ' route'
-        b.append(f'<a class="btn pdf" href="../{e(doc["url"])}" target="_blank" rel="noopener">📄 {e(label)} (PDF)</a>')
+        href = doc['url'] if doc['url'].startswith('http') else FILES + doc['url']   # route maps: the files site (v31.0)
+        b.append(f'<a class="btn pdf" href="{e(href)}" target="_blank" rel="noopener">📄 {e(label)} (PDF)</a>')
     b.append('</div>')
     if d.get('addr'):
         b.append('<div class="box">📍 <b>' + e(d['addr']) + '</b></div>')
