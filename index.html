@@ -558,7 +558,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.4 — Nov 2026";
+const VERSION = "v31.5 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1086,7 +1086,15 @@ function truckUrl(A, a, me){
   const e=a.nav_to||A.entrance, here=onPath(a, me);
   // every waypoint stays unless the driver is already on this approach's road, past it
   const wps=(a.waypoints||[]).filter(p=> here[1] > 0.3 || onPath(a, p)[0] > here[0]);
-  return dirUrl(e, wps);
+  return dirUrl(e, (here[1] > 0.3 ? feederWps(a, me) : []).concat(wps));
+}
+// feeders (v31.5): the roads our trucks drive further out, back to where their routes split (from GPS,
+// tools/route-miner/feeders.py). The driver joins the one passing closest; only its stops still ahead stay.
+function feederWps(a, me){
+  let best=null;
+  (a.feeders||[]).forEach(f=>{ const h=onPath(f, me); if(!best || h[1] < best.h[1]-0.05) best={f, h}; });
+  if(!best) return [];
+  return (best.f.waypoints||[]).filter(p=> onPath(best.f, p)[0] > best.h[0]);
 }
 function lastApproach(d){
   const A=APPROACHES[d._id], used=lsGet('titan_lastapp',{})[d._id];

@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v70';
+const VER = 'titan-v71';
 // route maps and the safety video live on their own site (v31.0) so this one publishes fast
 const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
