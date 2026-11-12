@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://server.arcgisonline.com; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://server.arcgisonline.com; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://server.arcgisonline.com https://basemap.nationalmap.gov; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://server.arcgisonline.com https://basemap.nationalmap.gov; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Titan Energy Transportation — Haul Route Lookup</title>
@@ -411,6 +411,7 @@ window.TITAN_PADS=(function(){
   .maplibregl-ctrl-group button{width:44px !important; height:44px !important;}
   .maplibregl-ctrl-top-right{top:calc(76px + env(safe-area-inset-top, 0px));}
   .mapcardbtn{flex:1 1 100%;}
+  .offbox .btn{width:100%; display:block;} .offbox .btn:disabled{opacity:.6;}
   /* v30.7 off-route warning: big, top of the map, readable at arm's length */
   #offRoute{position:absolute; left:10px; right:10px; top:calc(70px + env(safe-area-inset-top, 0px)); z-index:5; margin:0 auto; max-width:540px;
             background:#c8101c; color:#fff; border:3px solid #fff; border-radius:14px; padding:12px 14px; text-align:center;
@@ -538,9 +539,14 @@ window.TITAN_PADS=(function(){
     <div class="mvrow"><span>Bridge weight limits<small>Closed, posted and under-rated bridges</small></span><button id="mapBrTog" class="mvtog" type="button" aria-label="Show bridge weight limits"></button></div>
     <div class="mvrow"><span>Pad names<small>Names on the pins when zoomed in</small></span><button id="mapLblTog" class="mvtog" type="button" aria-label="Show pad names"></button></div>
     <div class="mvrow"><span>Off-route sound<small>A beep when you leave the blue truck route (the warning always shows and vibrates)</small></span><button id="mapSndTog" class="mvtog" type="button" aria-label="Beep when off the truck route"></button></div>
+    <div class="mvhead" style="margin-top:14px"><b>Offline maps</b></div>
+    <div class="offbox"><button id="offSave" class="btn nav" type="button">&#11015;&#65039; Save this area for offline</button>
+      <div class="mvsrc" id="offNote" style="margin-top:8px">Saves the street map and satellite view for what&rsquo;s on screen, so the lease road still shows with no signal. Save it while you have signal; zoom to the area first (a few miles across).</div>
+      <div class="mvsrc" id="offUse"></div>
+      <button id="offClear" class="btn flag" type="button" style="margin-top:8px">Clear saved maps</button></div>
     <div class="mvhead" style="margin-top:14px"><b>Key</b></div>
     <div class="mvkey" id="mapKey"></div>
-    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Imagery &copy; Esri.</div>
+    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Imagery &copy; Esri &middot; Offline imagery: USGS The National Map (public domain).</div>
   </div>
   <div id="mapSheet" class="mvsheet" hidden role="dialog" aria-label="Selected place"></div>
 </div>
@@ -549,7 +555,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v30.7 — Nov 2026";
+const VERSION = "v30.8 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1764,6 +1770,88 @@ function checkRoute(acc){
 document.getElementById('mapSndTog').addEventListener('click', ()=>{
   OFFSOUND = !OFFSOUND; lsSet('titan_offroute_sound', OFFSOUND); paintMapUI(); if(OFFSOUND){ wakeAudio(); alarm(); }
 });
+// ===== v30.8: save this area for offline =====
+// Saves what a driver needs to find a lease road with no signal, for the area on screen: the street map (OpenFreeMap
+// vector tiles to zoom 14 - the map draws closer zooms from them - plus its style, fonts and sprites) and the
+// satellite view from USGS imagery (public domain) to zoom 16. OpenFreeMap allows offline saves of at most 3,000
+// tiles / 50 MB, 4 requests at a time; the same pace is used for USGS. The service worker keeps them (sw.js).
+const OFM = 'https://tiles.openfreemap.org', USGS = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
+const SAVE_PARALLEL = 4, OFM_MAX_TILES = 3000, SAT_MAX_TILES = 2500, VEC_ZMIN = 8, VEC_ZMAX = 14, SAT_ZMAX = 16;
+let SAVING = false;
+function swAsk(msg, ms = 8000){
+  const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
+  if(!ctl) return Promise.resolve(null);
+  return new Promise(res=>{ const ch = new MessageChannel(); const t = setTimeout(()=>res(null), ms);
+    ch.port1.onmessage = e=>{ clearTimeout(t); res(e.data); }; ctl.postMessage(msg, [ch.port2]); });
+}
+function tileRange(b, z){
+  const n = 2 ** z, lat = v => Math.max(-85.05, Math.min(85.05, v));
+  const ty = v => Math.floor((1 - Math.log(Math.tan(lat(v)*Math.PI/180) + 1/Math.cos(lat(v)*Math.PI/180)) / Math.PI) / 2 * n);
+  const tx = v => Math.floor((v + 180) / 360 * n);
+  return {x0: Math.max(0, tx(b.getWest())), x1: Math.min(n-1, tx(b.getEast())), y0: Math.max(0, ty(b.getNorth())), y1: Math.min(n-1, ty(b.getSouth()))};
+}
+const rangeCount = r => (r.x1 - r.x0 + 1) * (r.y1 - r.y0 + 1);
+function rangeUrls(r, z, fmt){ const out = []; for(let x=r.x0; x<=r.x1; x++) for(let y=r.y0; y<=r.y1; y++) out.push(fmt(z, x, y)); return out; }
+const mb = b => (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB';
+async function paintOffline(note){
+  const u = await swAsk({type: 'tiles-usage'});
+  const el = document.getElementById('offUse');
+  if(note !== undefined) document.getElementById('offNote').textContent = note;
+  el.textContent = u && !u.error ? 'Saved maps on this phone: ' + mb(u.bytes) + ' of ' + mb(u.cap) + ' (oldest unused go first past that).'
+                                 : 'Saved maps need the site installed: reload once, then save.';
+}
+async function saveArea(){
+  if(SAVING || !MAP) return;
+  if(!(navigator.serviceWorker && navigator.serviceWorker.controller)){ toast('Reload the site once, then save the area'); return; }
+  const z = MAP.getZoom();
+  if(z < 10){ toast('Zoom in to the area you need first (a few miles across)'); return; }
+  const b = MAP.getBounds();
+  // street: style(s), tile index, sprites, fonts, vector tiles
+  const files = new Set();
+  const styles = ['liberty', 'dark'].map(s => OFM + '/styles/' + s);
+  let tilejson = null;
+  try{
+    const sj = await Promise.all(styles.map(u => fetch(u).then(r => r.json())));
+    styles.forEach(u => files.add(u));
+    for(const st of sj){
+      if(typeof st.sprite === 'string') ['.json', '.png', '@2x.json', '@2x.png'].forEach(x => files.add(st.sprite + x));
+      const fonts = new Set(['Noto Sans Bold']);
+      st.layers.forEach(l => { const f = l.layout && l.layout['text-font']; if(Array.isArray(f) && f.every(x => typeof x === 'string')) fonts.add(f.join(',')); });
+      if(st.glyphs) fonts.forEach(f => ['0-255', '256-511'].forEach(rg => files.add(st.glyphs.replace('{fontstack}', encodeURIComponent(f)).replace('{range}', rg))));
+      for(const s of Object.values(st.sources)) if(s.url && !tilejson){ tilejson = s.url; files.add(s.url); }
+    }
+  }catch(e){ toast('No signal right now — save the area while you have signal'); return; }
+  let vec = [];
+  try{
+    const tj = await fetch(tilejson).then(r => r.json()), tpl = tj.tiles[0];
+    for(let vz = VEC_ZMIN; vz <= VEC_ZMAX; vz++) vec = vec.concat(rangeUrls(tileRange(b, vz), vz, (zz, x, y) => tpl.replace('{z}', zz).replace('{x}', x).replace('{y}', y)));
+  }catch(e){ toast('No signal right now — save the area while you have signal'); return; }
+  if(vec.length + files.size > OFM_MAX_TILES){ toast('That area is too big to save — zoom in a little'); return; }
+  // satellite: USGS from about the current zoom to 16, dropping the closest zooms if the area is large
+  let satMin = Math.max(11, Math.floor(z) - 1), satMax = SAT_ZMAX, sat = [];
+  const satCount = () => { let n = 0; for(let sz = satMin; sz <= satMax; sz++) n += rangeCount(tileRange(b, sz)); return n; };
+  while(satMax > 14 && satCount() > SAT_MAX_TILES) satMax--;
+  if(satCount() <= SAT_MAX_TILES) for(let sz = satMin; sz <= satMax; sz++) sat = sat.concat(rangeUrls(tileRange(b, sz), sz, (zz, x, y) => USGS + zz + '/' + y + '/' + x));
+  else satMax = 0;
+  const all = [...files, ...vec, ...sat];
+  SAVING = true; let done = 0, failed = 0, i = 0;
+  const btn = document.getElementById('offSave'); btn.disabled = true;
+  const note = () => document.getElementById('offNote').textContent = 'Saving… ' + done.toLocaleString() + ' of ' + all.length.toLocaleString();
+  note();
+  const worker = async () => { while(i < all.length){ const u = all[i++]; try{ const r = await fetch(u); if(!r.ok) failed++; await r.arrayBuffer(); }catch(e){ failed++; } done++; if(done % 20 === 0 || done === all.length) note(); } };
+  await Promise.all(Array.from({length: SAVE_PARALLEL}, worker));
+  SAVING = false; btn.disabled = false;
+  await swAsk({type: 'tiles-evict'});
+  const what = 'Saved: street map' + (satMax ? ' + satellite to zoom ' + satMax : ' (area too big for satellite — zoom in to save it)') +
+               (failed ? ' · ' + failed + ' tile' + (failed > 1 ? 's' : '') + ' missed (no signal?) — save again to fill in' : '') + '.';
+  paintOffline(what); toast(failed ? 'Saved, with some tiles missing' : '✅ Area saved for offline');
+}
+document.getElementById('offSave').addEventListener('click', saveArea);
+document.getElementById('offClear').addEventListener('click', async ()=>{
+  const r = await swAsk({type: 'tiles-clear'});
+  paintOffline(r && r.ok ? 'Saved maps cleared.' : 'Couldn’t clear — try again.');
+});
+document.getElementById('mapLayersBtn').addEventListener('click', ()=>{ if(!mapLayers.hidden) paintOffline(); });
 // ===== v30.6: start when the cards land =====
 function bootData(raw){
   DATA = raw; indexCards(); dropHidden();

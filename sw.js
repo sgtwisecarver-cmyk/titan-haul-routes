@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v63';
+const VER = 'titan-v64';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
@@ -49,10 +49,113 @@ function padsChanged() {
   return padsNote;
 }
 
+// ===== v30.8: offline map tiles =====
+// Street map (OpenFreeMap: tiles, fonts, sprites, styles) and offline satellite (USGS The National Map imagery,
+// public domain) are kept as they're viewed or saved with "Save this area", cache-first, in their own cache that
+// survives version bumps. Past TILE_CAP the least-recently-used tiles go first (an IndexedDB index of url/size/
+// last use). Esri World Imagery is never stored (its terms don't allow offline use): online it comes from Esri,
+// and when Esri can't be reached the saved USGS tile for the same spot is shown instead.
+const TILES = 'titan-tiles-v1';
+const TILE_CAP = 150 * 1024 * 1024;            // bytes
+const TILE_HOSTS = ['tiles.openfreemap.org', 'basemap.nationalmap.gov'];
+const USGS_TILE = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
+const CLEAR_PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
+// no tile and no signal: an empty tile instead of an error (nothing drawn there, no red console)
+function emptyTile(url) {
+  return /\.pbf(\?|$)/.test(url)
+    ? new Response(new Uint8Array(0), {status: 200, headers: {'Content-Type': 'application/x-protobuf'}})
+    : new Response(CLEAR_PNG, {status: 200, headers: {'Content-Type': 'image/png'}});
+}
+
+let tdb = null;
+function tileDb() {
+  return tdb || (tdb = new Promise((res, rej) => {
+    const r = indexedDB.open('titan-tiles', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('t', {keyPath: 'u'});
+    r.onsuccess = () => res(r.result); r.onerror = () => { tdb = null; rej(r.error); };
+  }));
+}
+function idb(mode, fn) {
+  return tileDb().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('t', mode), out = fn(tx.objectStore('t'));
+    tx.oncomplete = () => res(out && 'result' in out ? out.result : out); tx.onerror = () => rej(tx.error);
+  }));
+}
+const touched = new Map(); let touchTimer = null;
+function touch(u) {                               // last use, written in batches
+  touched.set(u, Date.now());
+  if (!touchTimer) touchTimer = new Promise(r => setTimeout(r, 1500)).then(() => {
+    const batch = [...touched]; touched.clear(); touchTimer = null;
+    return idb('readwrite', st => batch.forEach(([u, t]) => { const g = st.get(u); g.onsuccess = () => { if (g.result) { g.result.t = t; st.put(g.result); } }; }));
+  }).catch(() => {});
+  return touchTimer;
+}
+let evictTimer = null;
+function evictSoon() {
+  if (!evictTimer) evictTimer = new Promise(r => setTimeout(r, 4000)).then(evict).catch(() => {}).then(() => { evictTimer = null; });
+  return evictTimer;
+}
+async function evict() {
+  const all = await idb('readonly', st => st.getAll());
+  let total = all.reduce((a, r) => a + (r.size || 0), 0);
+  if (total <= TILE_CAP) return total;
+  all.sort((a, b) => a.t - b.t);
+  const c = await caches.open(TILES), gone = [];
+  for (const r of all) { if (total <= TILE_CAP * 0.9) break; total -= r.size || 0; gone.push(r.u); await c.delete(r.u); }
+  await idb('readwrite', st => gone.forEach(u => st.delete(u)));
+  return total;
+}
+async function tileUsage() {
+  const all = await idb('readonly', st => st.getAll());
+  return {bytes: all.reduce((a, r) => a + (r.size || 0), 0), tiles: all.length, cap: TILE_CAP};
+}
+async function clearTiles() {
+  await caches.delete(TILES);
+  await idb('readwrite', st => st.clear());
+}
+async function keepTile(url, res) {
+  const blob = await res.blob();
+  const c = await caches.open(TILES);
+  await c.put(url, new Response(blob, {status: 200, headers: {'Content-Type': res.headers.get('Content-Type') || ''}}));
+  await idb('readwrite', st => st.put({u: url, size: blob.size, t: Date.now()}));
+  return evictSoon();
+}
+// tiles, fonts, sprites: saved copy first. Styles and the tile index (they change): network first, saved copy offline.
+function tileFetch(e, url) {
+  const key = url.href;
+  const mutable = url.hostname === 'tiles.openfreemap.org' && !/\.(pbf|png|jpg|jpeg|webp|json)$/.test(url.pathname) && !url.pathname.includes('/sprites/')
+               || /\/styles\//.test(url.pathname);
+  return caches.open(TILES).then(c => c.match(key).then(hit => {
+    if (hit && !mutable) { e.waitUntil(touch(key)); return hit; }
+    return fetch(e.request).then(res => {
+      if (res.ok) e.waitUntil(keepTile(key, res.clone()).catch(() => {}));
+      return res;
+    }).catch(() => hit || emptyTile(key));
+  }));
+}
+// Esri satellite: network only; no signal -> the saved USGS tile for the same z/y/x (both are web-mercator XYZ)
+function esriFetch(e, url) {
+  return fetch(e.request).catch(() => {
+    const m = url.pathname.match(/\/World_Imagery\/MapServer\/tile\/(\d+)\/(\d+)\/(\d+)/);
+    if (!m) return emptyTile(url.href);
+    const u = USGS_TILE + m[1] + '/' + m[2] + '/' + m[3];
+    return caches.open(TILES).then(c => c.match(u)).then(hit => { if (hit) e.waitUntil(touch(u)); return hit || emptyTile(u); });
+  });
+}
+self.addEventListener('message', e => {
+  const d = e.data || {}, port = e.ports && e.ports[0];
+  const reply = p => e.waitUntil(p.then(v => port && port.postMessage(v), err => port && port.postMessage({error: String(err)})));
+  if (d.type === 'tiles-usage') reply(tileUsage());
+  else if (d.type === 'tiles-clear') reply(clearTiles().then(() => ({ok: true})));
+  else if (d.type === 'tiles-evict') reply(evict().then(bytes => ({bytes})));
+});
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // road alerts come from the Cloudflare alerts Worker (v30.5): same slow-signal rule and saved copy as the shell
   const alerts = url.origin + url.pathname === ALERTS;
+  if (e.request.method === 'GET' && TILE_HOSTS.includes(url.hostname)) { e.respondWith(tileFetch(e, url)); return; }
+  if (e.request.method === 'GET' && url.hostname === 'server.arcgisonline.com') { e.respondWith(esriFetch(e, url)); return; }
   if (url.origin !== location.origin && !alerts) return;   // live weather/maps: network only
   if (e.request.method !== 'GET') return;
 
