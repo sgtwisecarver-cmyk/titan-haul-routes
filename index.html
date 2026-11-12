@@ -120,6 +120,8 @@ window.TITAN_PADS=(function(){
   .mlinks{display:grid; grid-template-columns:1fr 1fr; gap:2px 10px;}
   .mlinks a{display:flex; align-items:center; min-height:42px; padding:4px 2px; color:var(--cyan-ink); text-decoration:none; font-weight:600; font-size:14.5px;}
   .mlinks a.apply{color:var(--amber-ink);}
+  .mver{display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:14px; padding-top:10px; border-top:1px solid rgba(128,144,176,.25); color:var(--dim); font-size:13px; font-variant-numeric:tabular-nums;}
+  .mver button{min-height:40px; padding:0 12px; border-radius:10px; border:1px solid rgba(128,144,176,.4); background:transparent; color:var(--cyan-ink); font:inherit; font-weight:600;}
   html.menu-open, html.menu-open body{overflow:hidden;}
   .searchwrap{position:relative;}
   .searchwrap .mag{position:absolute; left:13px; top:50%; transform:translateY(-50%); opacity:.55; font-size:16px; pointer-events:none;}
@@ -476,6 +478,7 @@ window.TITAN_PADS=(function(){
       <a href="info/about.html">&#8505;&#65039; About this site</a>
       <a href="mailto:rwisecarver@tetransports.com?subject=Titan%20Routes%20Website%20%E2%80%94%20Feature%20Request&body=What%20I%27d%20like%20the%20site%20to%20do%3A%0A%0A%0AMy%20name%3A%20">&#128161; Request a feature</a>
     </div>
+    <div class="mver"><span id="mverTxt"></span><button type="button" id="mverBtn">&#8635; Get latest</button></div>
    </div>
   </div>
   <div id="custSheet" hidden role="dialog" aria-modal="true" aria-label="Pick a customer">
@@ -555,7 +558,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.3 — Nov 2026";
+const VERSION = "v31.4 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1225,6 +1228,18 @@ function locHelp(retry){
 document.getElementById('lhclose').addEventListener('click', ()=>{ document.getElementById('lochelp').hidden = true; LOC_RETRY = null; });
 document.getElementById('lhretry').addEventListener('click', ()=>{   // a tap, so the phone may show its own question
   document.getElementById('lochelp').hidden = true; const r = LOC_RETRY; LOC_RETRY = null; if(r) r();
+});
+// version at the bottom of the menu (v31.4) + a button that pulls the newest copy even on a weak signal
+document.getElementById('mverTxt').textContent = 'Version ' + VERSION + (IS_HOME_APP ? ' · home-screen icon' : '');
+document.getElementById('mverBtn').addEventListener('click', async e=>{
+  e.currentTarget.textContent = 'Updating…';
+  try{
+    const r = await fetch('./index.html', {cache:'no-store'});                 // the newest page, straight from the site
+    if(r.ok && 'caches' in window){ const ks = await caches.keys();
+      for(const k of ks) if(k.startsWith('titan-core-')) await (await caches.open(k)).put(new URL('./index.html', location).href, r.clone()); }
+    const reg = navigator.serviceWorker && await navigator.serviceWorker.getRegistration(); if(reg) await reg.update();
+  }catch(_){}
+  location.reload();
 });
 // one place that asks for location: the phone's answer, or steps to turn it on
 function getLoc(ok, fail, opts){
