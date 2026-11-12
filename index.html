@@ -411,6 +411,15 @@ window.TITAN_PADS=(function(){
   .maplibregl-ctrl-group button{width:44px !important; height:44px !important;}
   .maplibregl-ctrl-top-right{top:calc(76px + env(safe-area-inset-top, 0px));}
   .mapcardbtn{flex:1 1 100%;}
+  /* v30.7 off-route warning: big, top of the map, readable at arm's length */
+  #offRoute{position:absolute; left:10px; right:10px; top:calc(70px + env(safe-area-inset-top, 0px)); z-index:5; margin:0 auto; max-width:540px;
+            background:#c8101c; color:#fff; border:3px solid #fff; border-radius:14px; padding:12px 14px; text-align:center;
+            box-shadow:0 8px 28px rgba(0,0,0,.5); animation:offpulse 1s ease-in-out infinite alternate;}
+  #offRoute[hidden]{display:none;}
+  #offRoute b{display:block; font:800 26px/1.05 var(--font-display); letter-spacing:1px;}
+  #offRoute span{display:block; font-size:15px; font-weight:600; margin-top:4px;}
+  @keyframes offpulse{from{background:#c8101c;} to{background:#8f0a13;}}
+  @media (prefers-reduced-motion: reduce){ #offRoute{animation:none;} }
 </style>
 </head>
 <body>
@@ -521,12 +530,14 @@ window.TITAN_PADS=(function(){
     <button id="mapLayersBtn" class="mvbtn" type="button" aria-haspopup="dialog">Layers</button>
   </div>
   <div id="mapMsg" class="mvmsg">Loading map&hellip;</div>
+  <div id="offRoute" hidden role="alert" aria-live="assertive"><b>&#9888; OFF THE TRUCK ROUTE</b><span id="offRouteTxt">Get back on the blue line when it&rsquo;s safe.</span></div>
   <div id="mapLayers" class="mvpanel" hidden role="dialog" aria-label="Map layers">
     <div class="mvhead"><span class="mvname" style="font-size:20px">Map layers</span><button class="x" type="button" data-close aria-label="Close">&#10005;</button></div>
     <div class="mvrow"><span>Map<small>Satellite: the pad from above</small></span>
       <div class="seg" id="mapStyleSeg" role="group" aria-label="Map style"><button type="button" data-sat="0">Street</button><button type="button" data-sat="1">Satellite</button></div></div>
     <div class="mvrow"><span>Bridge weight limits<small>Closed, posted and under-rated bridges</small></span><button id="mapBrTog" class="mvtog" type="button" aria-label="Show bridge weight limits"></button></div>
     <div class="mvrow"><span>Pad names<small>Names on the pins when zoomed in</small></span><button id="mapLblTog" class="mvtog" type="button" aria-label="Show pad names"></button></div>
+    <div class="mvrow"><span>Off-route sound<small>A beep when you leave the blue truck route (the warning always shows and vibrates)</small></span><button id="mapSndTog" class="mvtog" type="button" aria-label="Beep when off the truck route"></button></div>
     <div class="mvhead" style="margin-top:14px"><b>Key</b></div>
     <div class="mvkey" id="mapKey"></div>
     <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Imagery &copy; Esri.</div>
@@ -538,7 +549,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v30.6 — Nov 2026";
+const VERSION = "v30.7 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1505,7 +1516,10 @@ function loadBridges(){
 }
 function closeSheets(){ mapSheet.hidden = true; mapLayers.hidden = true; document.getElementById('mapLayersBtn').classList.remove('on'); }
 function selectPad(d, fly){
-  MAPSEL = d; mapLayers.hidden = true; document.getElementById('mapLayersBtn').classList.remove('on');
+  if(MAPSEL !== d) resetRoute();
+  MAPSEL = d; mapLayers.hidden = true; wakeAudio();
+  if(routeWays(d).length && MEWATCH === null && navigator.permissions && navigator.geolocation)   // a truck route: follow along if location is already allowed
+    navigator.permissions.query({name:'geolocation'}).then(st=>{ if(st.state==='granted' && !mapEl.hidden && MAPSEL===d) watchMe(); }).catch(()=>{}); document.getElementById('mapLayersBtn').classList.remove('on');
   if(MAP && MAP.getSource('way')){ MAP.getSource('way').setData(wayGeo(d)); MAP.setFilter('pads-sel', ['==',['get','id'],d._id]); }
   const A = APPROACHES[d._id], ways = A && A.approaches ? A.approaches.filter(a=>a.path && a.path.length>1) : [];
   const p = padPoint(d);
@@ -1563,6 +1577,7 @@ function paintMapUI(){
   document.querySelectorAll('#mapStyleSeg button').forEach(b=>b.setAttribute('aria-pressed', String((b.dataset.sat==='1')===MAPSAT)));
   document.getElementById('mapBrTog').setAttribute('aria-pressed', String(MAPBR));
   document.getElementById('mapLblTog').setAttribute('aria-pressed', String(MAPLBL));
+  document.getElementById('mapSndTog').setAttribute('aria-pressed', String(OFFSOUND));
   document.getElementById('mapKey').innerHTML =
       CUSTOMERS.concat(['Frac','Disposal']).filter(s=>DATA.some(d=>d.src===s)).map(s=>'<i style="background:'+escAttr(PIN_COLOR[s]||'#888')+'"></i><span>'+esc(s==='Frac'?'Active frac':s)+'</span>').join('')
     + '<i style="background:transparent;border-color:#ff2828;border-width:3px"></i><span>Road alert on the route</span>'
@@ -1623,7 +1638,7 @@ function showFocus(){
   if(MAPSEL) return;
   fitTo(refreshPads());
 }
-let MEMARK = null, MEWATCH = null;
+let MEMARK = null, MEWATCH = null, WATCH_WANTED = false, MYACC = null;
 function showMe(){
   if(!MAP || !MY) return;
   if(!MEMARK){ const el=document.createElement('div'); el.className='medot'; el.setAttribute('aria-label','You are here');
@@ -1632,11 +1647,20 @@ function showMe(){
 }
 function watchMe(){
   if(MEWATCH!==null || !navigator.geolocation) return;
-  MEWATCH = navigator.geolocation.watchPosition(p=>{ MY={lat:p.coords.latitude, lon:p.coords.longitude}; showMe(); }, ()=>{},
-                                                {enableHighAccuracy:true, maximumAge:15000});
+  WATCH_WANTED = true;
+  if(document.hidden) return;                                        // starts when the screen comes back (visibilitychange)
+  MEWATCH = navigator.geolocation.watchPosition(p=>{ MY={lat:p.coords.latitude, lon:p.coords.longitude}; MYACC=p.coords.accuracy;
+                                                     showMe(); checkRoute(MYACC); }, ()=>{},
+                                                {enableHighAccuracy:true, maximumAge:5000});
 }
-function stopWatch(){ if(MEWATCH!==null){ navigator.geolocation.clearWatch(MEWATCH); MEWATCH=null; } }
+function stopWatch(keep){ if(MEWATCH!==null){ navigator.geolocation.clearWatch(MEWATCH); MEWATCH=null; } if(!keep){ WATCH_WANTED=false; resetRoute(); } }
+// screen off / another app: no GPS at all; back on the map: pick up where it was
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden) stopWatch(true);
+  else if(WATCH_WANTED && !mapEl.hidden) watchMe();
+});
 function locateOnMap(){
+  wakeAudio();
   const b = document.querySelector('.locbtn'); if(b) b.classList.add('busy');
   getLoc(()=>{ if(b) b.classList.remove('busy'); showMe(); watchMe();
                MAP.easeTo({center:[MY.lon, MY.lat], zoom:Math.max(MAP.getZoom(), 12), duration:700}); },
@@ -1670,6 +1694,75 @@ document.getElementById('mapBrTog').addEventListener('click', ()=>{
 document.getElementById('mapLblTog').addEventListener('click', ()=>{
   MAPLBL = !MAPLBL; lsSet('titan_maplabels', MAPLBL); paintMapUI();
   if(MAP && MAP.getLayer('pads-label')) MAP.setLayoutProperty('pads-label', 'visibility', MAPLBL ? 'visible' : 'none');
+});
+// ===== v30.7: off-route warning =====
+// While the map follows you to a pad that has a mined truck route (the blue line, data/approaches.json), leaving
+// that line for more than a few seconds shows OFF THE TRUCK ROUTE, vibrates and beeps. A warning only - no
+// rerouting, nothing to tap. It arms once you're actually on the truck route (past its first 250 m, so driving by
+// its mouth doesn't count) and stands down for that pad when you reach the entrance (leaving afterwards is fine).
+// Costs nothing with the map closed: the GPS watch only runs while the map is open and on screen.
+const OFF_M = 150, OFF_SEC = 8, ARM_FROM_START_M = 250, ARRIVE_M = 80, MAX_ACC_M = 150, REPEAT_SEC = 60;
+let ROUTE = {armed:false, done:false, offSince:0, warnedAt:0};
+let OFFSOUND = lsGet('titan_offroute_sound', true), AUDIO = null;
+const offEl = document.getElementById('offRoute');
+function metersPerDeg(lat){ return [111320*Math.cos(lat*Math.PI/180), 110540]; }
+function distM(aLat, aLon, bLat, bLon){ const [kx,ky]=metersPerDeg(aLat); return Math.hypot((bLon-aLon)*kx, (bLat-aLat)*ky); }
+// shortest distance (m) from a point to a polyline of [lat, lon]
+function distToPathM(lat, lon, path){
+  const [kx, ky] = metersPerDeg(lat); let best = Infinity;
+  for(let i=0; i<path.length-1; i++){
+    const ax=(path[i][1]-lon)*kx, ay=(path[i][0]-lat)*ky, bx=(path[i+1][1]-lon)*kx, by=(path[i+1][0]-lat)*ky;
+    const dx=bx-ax, dy=by-ay, L=dx*dx+dy*dy, t = L ? Math.max(0, Math.min(1, -(ax*dx+ay*dy)/L)) : 0;
+    best = Math.min(best, Math.hypot(ax+t*dx, ay+t*dy));
+  }
+  return best;
+}
+function routeWays(d){ const A = d && APPROACHES[d._id]; return A && A.approaches ? A.approaches.filter(a=>a.path && a.path.length>1).map(a=>a.path) : []; }
+function resetRoute(){ ROUTE = {armed:false, done:false, offSince:0, warnedAt:0}; showOff(false); }
+function showOff(on, meters){
+  offEl.hidden = !on;
+  if(on) document.getElementById('offRouteTxt').textContent =
+    (meters < 1000 ? Math.round(meters/10)*10+' m' : (meters/1609.34).toFixed(1)+' mi') + ' off the blue line — get back on it when it’s safe.';
+}
+function wakeAudio(){   // phones only allow sound after a tap: this runs on the taps that start following
+  try{ if(!AUDIO) AUDIO = new (window.AudioContext || window.webkitAudioContext)(); if(AUDIO.state==='suspended') AUDIO.resume(); }catch(e){}
+}
+function alarm(){
+  const touched = !navigator.userActivation || navigator.userActivation.hasBeenActive;   // phones refuse (and log) vibration before any tap
+  try{ if(navigator.vibrate && touched) navigator.vibrate([400,150,400,150,400]); }catch(e){}
+  if(!OFFSOUND || !AUDIO) return;
+  try{
+    const t0 = AUDIO.currentTime + 0.02;
+    [0, 0.35, 0.7].forEach(dt=>{
+      const o = AUDIO.createOscillator(), g = AUDIO.createGain();
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.setValueAtTime(0.0001, t0+dt); g.gain.exponentialRampToValueAtTime(0.35, t0+dt+0.02); g.gain.exponentialRampToValueAtTime(0.0001, t0+dt+0.25);
+      o.connect(g); g.connect(AUDIO.destination); o.start(t0+dt); o.stop(t0+dt+0.27);
+    });
+  }catch(e){}
+}
+function checkRoute(acc){
+  if(!MAPSEL || mapEl.hidden || ROUTE.done || !MY) return;
+  const ways = routeWays(MAPSEL); if(!ways.length) return;
+  if(acc != null && acc > MAX_ACC_M) return;                  // too rough a fix to judge either way
+  const A = APPROACHES[MAPSEL._id];
+  if(A && A.entrance && distM(MY.lat, MY.lon, A.entrance[0], A.entrance[1]) <= ARRIVE_M){ resetRoute(); ROUTE.done = true; return; }
+  const d = Math.min(...ways.map(p=>distToPathM(MY.lat, MY.lon, p)));
+  if(d <= OFF_M){                                             // on the truck route
+    if(!ROUTE.armed && ways.some(p=>distToPathM(MY.lat, MY.lon, p) <= OFF_M && distM(MY.lat, MY.lon, p[0][0], p[0][1]) > ARM_FROM_START_M)) ROUTE.armed = true;
+    ROUTE.offSince = 0; if(ROUTE.warnedAt){ ROUTE.warnedAt = 0; showOff(false); }
+    return;
+  }
+  if(!ROUTE.armed) return;                                    // not on it yet: still driving there
+  if(d <= OFF_M + Math.min(acc || 0, MAX_ACC_M)){ ROUTE.offSince = 0; return; }   // inside the GPS error
+  const now = Date.now();
+  if(!ROUTE.offSince) ROUTE.offSince = now;
+  if(now - ROUTE.offSince < OFF_SEC*1000) return;
+  showOff(true, d);
+  if(!ROUTE.warnedAt || now - ROUTE.warnedAt >= REPEAT_SEC*1000){ ROUTE.warnedAt = now; alarm(); }
+}
+document.getElementById('mapSndTog').addEventListener('click', ()=>{
+  OFFSOUND = !OFFSOUND; lsSet('titan_offroute_sound', OFFSOUND); paintMapUI(); if(OFFSOUND){ wakeAudio(); alarm(); }
 });
 // ===== v30.6: start when the cards land =====
 function bootData(raw){
