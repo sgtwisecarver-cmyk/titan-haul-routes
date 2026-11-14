@@ -191,15 +191,22 @@ def card_alerts(d, sets, day=None):
     return out + [a for a in alert_list(d.get('alert')) if live(a, day)]
 
 
-# what a speed line is about, first match wins: "10 MPH ZONE ..." is the zone even though it names the pad
+# what a speed line is about: the subject named first in its label (the text before the first ":"), else first in
+# the whole line - "10 MPH ZONE: ... to the pad" is the zone, "CUTLER RD past the Lambeau lease road: ..." is Cutler Rd,
+# "OAK DALE RD INTERSECTION (Cutler Rd & ...)" is the intersection
 SPEED_SUBJECTS = [('zone', r'\bzone\b'), ('lease road', r'lease road'), ('on pad', r'\bon (the )?pad\b'),
-                  ('cutler rd', r'\bcutler\b')]
+                  ('intersection', r'\bintersection\b'), ('cutler rd', r'\bcutler\b')]
+
+
+def _first_subject(text):
+    hits = [(m.start(), name) for name, rx in SPEED_SUBJECTS for m in [re.search(rx, text, re.I)] if m]
+    return min(hits)[1] if hits else None
 
 
 def speeds(a):
     t = a.get('t') or ''
     mph = sorted({int(m) for m in re.findall(r'(\d+)\s*mph', t, re.I)})
-    subj = next((name for name, rx in SPEED_SUBJECTS if re.search(rx, t, re.I)), None)
+    subj = (_first_subject(t.split(':', 1)[0]) if ':' in t else None) or _first_subject(t)
     return subj, mph
 
 
