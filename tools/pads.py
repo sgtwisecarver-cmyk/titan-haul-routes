@@ -20,13 +20,22 @@ Command line:
     python tools/pads.py dump      # all cards as one JSON array on stdout (what `const DATA` used to be)
 A card added to a customer file without touching the manifest still shows on the site (after the listed cards)
 and `check` (also run by the publish job) files it in A-Z order.
+
+Shared rule sets (v31.9): data/rules.json holds named sets of road rules, {"<set>": {"name": ..., "rules": [alert, ...]}},
+each rule shaped like a card alert. A card lists the sets it follows in "rules": ["<set>", ...]; the page shows the
+set's rules first, then the card's own "alert" lines. Any alert or rule may carry "until": "YYYY-MM-DD" - shown
+through that day, then dropped. `check` fails (exit 1) when a card names a set that doesn't exist, a "temp": true
+alert or rule has no "until", a pad has a visible regular card and a visible frac card at the same time, or cards
+sharing a set give different speeds for the same thing in their own alerts.
 """
+import datetime
 import json
 import os
 import re
 import sys
 
 FILES = ['ascent', 'eog', 'gulfport', 'infinity', 'expand', 'tiburon', 'frac', 'disposal']
+RULES = os.path.join('data', 'rules.json')     # shared rule sets (v31.9) - not a customer file, so not in FILES
 
 
 def _dir(root):
@@ -134,12 +143,132 @@ def check(root, fix=True):
     return notes
 
 
+def load_rules(root):
+    path = os.path.join(root, RULES)
+    return _read(path) if os.path.exists(path) else {}
+
+
+def save_rules(root, sets):
+    """one rule per line, like the card files, so a diff shows just the rule that changed"""
+    out = []
+    for k, s in sets.items():
+        head = {x: y for x, y in s.items() if x != 'rules'}
+        rules = ',\n'.join('   ' + json.dumps(r, ensure_ascii=False, separators=(',', ':')) for r in s.get('rules', []))
+        out.append(json.dumps(k) + ':' + json.dumps(head, ensure_ascii=False, separators=(',', ':'))[:-1]
+                   + ',"rules":[\n' + rules + '\n  ]}')
+    with open(os.path.join(root, RULES), 'w', encoding='utf-8', newline='\n') as fh:
+        fh.write('{\n' + ',\n'.join(out) + '\n}\n')
+
+
+def alert_list(x):
+    """a card's "alert" (one string or a list) or a set's "rules" as a list of dicts"""
+    return [{'t': a} if isinstance(a, str) else a for a in (x if isinstance(x, list) else [x] if x else []) if a]
+
+
+def today():
+    try:
+        from zoneinfo import ZoneInfo
+        return datetime.datetime.now(ZoneInfo('America/New_York')).date().isoformat()
+    except Exception:
+        return (datetime.datetime.utcnow() - datetime.timedelta(hours=5)).date().isoformat()
+
+
+def visible(d, day=None):
+    day = day or today()
+    return not d.get('hidden') and not (d.get('until') and day > d['until'])
+
+
+def live(a, day=None):
+    """an alert or rule still showing today (no "until", or "until" not passed yet)"""
+    return not (a.get('until') and (day or today()) > a['until'])
+
+
+def card_alerts(d, sets, day=None):
+    """what the page shows on a card, in order: its rule sets' rules, then its own alerts (expired ones dropped)"""
+    out = []
+    for k in d.get('rules') or []:
+        out += [a for a in alert_list(sets.get(k, {}).get('rules')) if live(a, day)]
+    return out + [a for a in alert_list(d.get('alert')) if live(a, day)]
+
+
+# what a speed line is about, first match wins: "10 MPH ZONE ..." is the zone even though it names the pad
+SPEED_SUBJECTS = [('zone', r'\bzone\b'), ('lease road', r'lease road'), ('on pad', r'\bon (the )?pad\b'),
+                  ('cutler rd', r'\bcutler\b')]
+
+
+def speeds(a):
+    t = a.get('t') or ''
+    mph = sorted({int(m) for m in re.findall(r'(\d+)\s*mph', t, re.I)})
+    subj = next((name for name, rx in SPEED_SUBJECTS if re.search(rx, t, re.I)), None)
+    return subj, mph
+
+
+FRAC_RX = re.compile(r'^(.*?)\s+frac\b', re.I)
+
+
+def consistency(cards, sets, day=None):
+    """the publish-blocking problems (v31.9). Returns a list of messages; empty = fine."""
+    errs = []
+    for k, s in sets.items():
+        for a in alert_list(s.get('rules')):
+            if a.get('temp') and not a.get('until'):
+                errs.append(f'rule set {k}: temporary rule has no "until" date: {a.get("t", "")[:70]}')
+            if a.get('until') and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', a['until']):
+                errs.append(f'rule set {k}: "until" must be YYYY-MM-DD: {a["until"]}')
+    for d in cards:
+        i = card_id(d)
+        for k in d.get('rules') or []:
+            if k not in sets:
+                errs.append(f'{i}: rule set "{k}" is not in data/rules.json')
+        for a in alert_list(d.get('alert')):
+            if a.get('temp') and not a.get('until'):
+                errs.append(f'{i}: temporary alert has no "until" date: {a.get("t", "")[:70]}')
+            if a.get('until') and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', a['until']):
+                errs.append(f'{i}: "until" must be YYYY-MM-DD: {a["until"]}')
+    # a pad shows one way at a time: while its frac card is up, the regular card is hidden (with "goto")
+    regular = {(d['src'], d.get('pad', '').strip().lower()): d for d in cards if d.get('src') not in ('Frac', 'Disposal')}
+    for f in cards:
+        if f.get('src') != 'Frac' or not visible(f, day):
+            continue
+        m = FRAC_RX.match(f.get('pad', ''))
+        n = regular.get((f.get('operator'), (m.group(1) if m else '').strip().lower()))
+        if n and visible(n, day):
+            errs.append(f'{card_id(n)} is still on the list while its frac card {card_id(f)} is up: '
+                        f'set "hidden": true and "goto": "{card_id(f)}" on it, or take the frac card down')
+    # cards following the same set must not give different speeds for the same thing in their own alerts
+    for k in sets:
+        said = {}                                        # subject -> {mph: [card ids]}
+        for a in alert_list(sets[k].get('rules')):
+            subj, mph = speeds(a)
+            if subj:
+                for v in mph:
+                    said.setdefault(subj, {}).setdefault(v, []).append(f'set {k}')
+        for d in cards:
+            if k not in (d.get('rules') or []):
+                continue
+            for a in alert_list(d.get('alert')):
+                subj, mph = speeds(a)
+                if subj:
+                    for v in mph:
+                        said.setdefault(subj, {}).setdefault(v, []).append(card_id(d))
+        for subj, by in said.items():
+            if len(by) > 1:
+                errs.append(f'rule set {k}: different speeds for {subj}: ' +
+                            '; '.join(f'{v} MPH ({", ".join(sorted(set(w)))})' for v, w in sorted(by.items())))
+    return errs
+
+
 if __name__ == '__main__':
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     cmd = sys.argv[1] if len(sys.argv) > 1 else 'check'
     if cmd == 'check':
         notes = check(root)
         print('\n'.join(notes) if notes else 'pads ok: manifest and customer files agree')
+        errs = consistency(load_cards(root), load_rules(root))
+        if errs:
+            print('\nCHECK FAILED - fix these before publishing:\n  ' + '\n  '.join(errs))
+            sys.exit(1)
+        print('rules ok: rule sets, "until" dates, frac/regular cards and speeds agree')
     elif cmd == 'dump':
         sys.stdout.reconfigure(encoding='utf-8')
         print(json.dumps(load_cards(root), ensure_ascii=False, separators=(',', ':')))

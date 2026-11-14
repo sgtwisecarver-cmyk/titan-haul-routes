@@ -28,9 +28,13 @@ window.TITAN_PADS=(function(){
   var KNOWN=['ascent','eog','gulfport','infinity','expand','tiburon','frac','disposal'], got={};
   function get(f){ return got[f] || (got[f]=fetch('data/pads/'+f+'.json').then(function(r){ if(!r.ok) throw new Error(f+' '+r.status); return r.json(); })); }
   KNOWN.forEach(function(f){ get(f).catch(function(){}); });          // all at once, not one after another
+  // v31.9: shared road rule sets (data/rules.json, see tools/pads.py) - safety rules, so the cards wait for them
+  var rules=fetch('data/rules.json').then(function(r){ if(!r.ok) throw new Error('rules '+r.status); return r.json(); });
+  rules.catch(function(){});
   function id(d){ return d.id || (d.src+'-'+d.pad).toLowerCase().replace(/[^a-z0-9 ]+/g,' ').replace(/\s+/g,' ').trim().replace(/ /g,'-'); }
   return fetch('data/pads/index.json').then(function(r){ if(!r.ok) throw new Error('index '+r.status); return r.json(); }).then(function(m){
-    return Promise.all(m.files.map(get)).then(function(parts){
+    return Promise.all([Promise.all(m.files.map(get)), rules]).then(function(both){
+      var parts=both[0]; window.TITAN_RULES=both[1];
       var by={}, out=[], seen={};
       parts.forEach(function(p){ p.forEach(function(d){ by[id(d)]=d; }); });
       m.order.forEach(function(i){ if(by[i] && !seen[i]){ seen[i]=1; out.push(by[i]); } });
@@ -558,7 +562,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.8 — Nov 2026";
+const VERSION = "v31.9 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -656,8 +660,14 @@ let APPROACHES = {};
   // a card opened before this arrived (shared link, quick tap) is rebuilt so it shows its truck route
   document.querySelectorAll('.item[data-id]').forEach(el=>{ const b=el.querySelector('.body'), d=BYID[el.dataset.id]; if(b && d && APPROACHES[d._id]) b.replaceWith(body(d)); });
 }).catch(()=>{}); })();
-// d.alert: one string, or a list of {t, added, temp, from} (v31.7: EOG traffic notes, dated so temporary ones can be found)
-function alertsFor(d){ const a=[]; if(d.alert) (Array.isArray(d.alert)?d.alert:[d.alert]).forEach(x=>{ const t=typeof x==="string"?x:(x&&x.t); if(t) a.push(t); }); const au=AUTO_ALERTS[d._id]; if(au&&au.length) au.forEach(x=>a.push(x)); return a; }
+// d.alert: one string, or a list of {t, added, temp, from, until} (v31.7: EOG traffic notes, dated so temporary ones can be found)
+// d.rules: names of shared rule sets in data/rules.json (v31.9) - their rules show first, then the card's own alerts.
+// Any alert or rule with "until":"YYYY-MM-DD" shows through that day, then drops off.
+function alertsFor(d){ const a=[];
+  const add = list => (Array.isArray(list)?list:(list?[list]:[])).forEach(x=>{ const t=typeof x==="string"?x:(x&&x.t); if(t && !(x.until && TODAY > x.until)) a.push(t); });
+  (d.rules||[]).forEach(k=>{ const s=(window.TITAN_RULES||{})[k]; if(s) add(s.rules); });
+  add(d.alert);
+  const au=AUTO_ALERTS[d._id]; if(au&&au.length) au.forEach(x=>a.push(x)); return a; }
 function updateAlertChip(){ const n=DATA.filter(d=>alertsFor(d).length).length; const c=document.querySelector('.chip.alertchip'); if(c){ c.style.display=n?'':'none'; c.innerHTML='⚠ <span class="wide">Alerts </span>'+n; c.setAttribute('aria-label', n+' pads with a road alert'); } }
 // road alerts (v30.5): the Cloudflare alerts Worker builds them from OHGO every 10 minutes, off the site's deploy path.
 // Asked for in order - the Worker, then the site's own alerts.json (refreshed on every publish) - and whichever

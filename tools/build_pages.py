@@ -47,14 +47,25 @@ def e(s):
     return html.escape(str(s if s is not None else ''), quote=True)
 
 
-def load_data():
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    import pads   # data/pads/*.json in the site's list order (v30.6)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import pads   # data/pads/*.json in the site's list order (v30.6) + shared rule sets in data/rules.json (v31.9)
+RULESETS = pads.load_rules(ROOT)
+
+
+def load_all():
     data = pads.load_cards(ROOT)
     for d in data:
         d['_id'] = d.get('id') or slug(d['src'] + '-' + d['pad'])
+    return data
+
+
+def shown(d):
     # same rule as the lookup: hidden cards and cards past their "until" date are off the list
-    return [d for d in data if not d.get('hidden') and not (d.get('until') and TODAY > d['until'])]
+    return not d.get('hidden') and not (d.get('until') and TODAY > d['until'])
+
+
+def load_data():
+    return [d for d in load_all() if shown(d)]
 
 
 def operator(d):
@@ -228,11 +239,9 @@ def pad_page(d, located):
          f"<h1>{e(d['pad'])}</h1>"]
     meta = [x for x in [opname if kind(d) != 'disposal' else (('Disposal' + (' · ' + opname if opname else ''))), where] if x]
     b.append('<div class="meta">' + e(' · '.join(meta)) + '</div>')
-    al = d.get('alert')                          # one string, or a list of {t, added, temp, from} (v31.7)
-    for a in (al if isinstance(al, list) else [al] if al else []):
-        t = a if isinstance(a, str) else (a or {}).get('t')
-        if t:
-            b.append('<div class="warn">🚧 <b>Road alert:</b> ' + e(t) + '</div>')
+    for a in pads.card_alerts(d, RULESETS, TODAY):  # shared rule sets first, then the card's own alerts; past "until" dropped
+        if a.get('t'):
+            b.append('<div class="warn">🚧 <b>Road alert:</b> ' + e(a['t']) + '</div>')
     b.append('<div class="btns">'
              f'<a class="btn go" href="{e(lookup)}">🧭 Open in the route lookup — Navigate, map &amp; calculator</a>')
     docs = d.get('docs') or ([{'url': d['url'], 'label': 'Traffic Control Plan' if d['src'] == 'Frac' else 'Route map'}] if d.get('url') else [])
@@ -339,8 +348,19 @@ def az_page(cards):
     return page('All pads A–Z — haul routes by customer and county', desc, 'pad/', ''.join(b))
 
 
+def redirect_page(d, to):
+    """a hidden card's old pad page (shared links, Google) forwards to the card that replaces it (its "goto")"""
+    url = f"{to['_id']}.html"
+    return ('<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">'
+            f'<meta http-equiv="refresh" content="0; url={e(url)}">'
+            f'<link rel="canonical" href="{e(SITE)}/pad/{e(url)}"><meta name="robots" content="noindex">'
+            f'<title>{e(d["pad"])} — see {e(to["pad"])}</title></head><body>'
+            f'<p>{e(d["pad"])} — use <a href="{e(url)}">{e(to["pad"])}</a>.</p></body></html>\n')
+
+
 def main():
-    cards = load_data()
+    every = load_all()
+    cards = [d for d in every if shown(d)]
     located = [d for d in cards if d.get('lat') and d.get('lon') and d['src'] != 'Frac']
     os.makedirs(OUT, exist_ok=True)
     for f in os.listdir(OUT):           # clear last build so removed cards don't linger
@@ -349,6 +369,13 @@ def main():
     for d in cards:
         with open(os.path.join(OUT, d['_id'] + '.html'), 'w', encoding='utf-8', newline='\n') as fh:
             fh.write(pad_page(d, located))
+    built = {d['_id']: d for d in cards}
+    moved = 0
+    for d in every:                     # hidden cards with a "goto": their old page forwards (not in the sitemap)
+        if d['_id'] not in built and d.get('goto') in built:
+            with open(os.path.join(OUT, d['_id'] + '.html'), 'w', encoding='utf-8', newline='\n') as fh:
+                fh.write(redirect_page(d, built[d['goto']]))
+            moved += 1
     with open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write(az_page(cards))
     urls = [SITE + '/', SITE + '/pad/'] + [SITE + '/info/' + f for f in sorted(os.listdir(os.path.join(ROOT, 'info'))) if f.endswith('.html')]
@@ -358,7 +385,7 @@ def main():
     sm.append('</urlset>')
     with open(os.path.join(ROOT, 'sitemap.xml'), 'w', encoding='utf-8', newline='\n') as fh:
         fh.write('\n'.join(sm) + '\n')
-    print(f'{len(cards)} pad pages, A-Z list and sitemap ({len(urls)} urls) built for {TODAY}')
+    print(f'{len(cards)} pad pages, {moved} forwarding pages, A-Z list and sitemap ({len(urls)} urls) built for {TODAY}')
 
 
 if __name__ == '__main__':

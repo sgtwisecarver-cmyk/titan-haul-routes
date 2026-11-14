@@ -1,0 +1,8 @@
+{
+"eog-cutler-rd":{"name":"EOG Cutler Rd pads - Ditka, Lambeau, Shula (Sherrodsville, Warren Twp, Tuscarawas Co)","rules":[
+   {"t":"CUTLER RD: 25 MPH MAX, no exceptions.","added":"2026-11-12","temp":false,"from":"EOG vendor call 11/12/2026"},
+   {"t":"OAK DALE RD INTERSECTION (Cutler Rd & Oak Dale Rd): EOG-controlled. Stop signs are covered and a flagger is on site. Slow-roll through on the flagger's signal.","added":"2026-11-12","temp":true,"from":"EOG vendor call 11/12/2026 (called \"Oakmont\" on the call; Rick 11/14/2026: Cutler Rd & Oak Dale Rd)","until":"2026-12-01"},
+   {"t":"LEASE ROAD: 10 MPH absolute max.","added":"2026-11-12","temp":false,"from":"EOG vendor call 11/12/2026"},
+   {"t":"ON PAD: 5 MPH max.","added":"2026-11-14","temp":false,"from":"EOG Speed Limits, Ditka TCP (pdfs/fracs/ditka-tcp.pdf)"}
+  ]}
+}

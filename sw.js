@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v74';
+const VER = 'titan-v75';
 // route maps and the safety video live on their own site (v31.0) so this one publishes fast
 const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
@@ -11,6 +11,8 @@ const SHELL = [
   './data/pads/index.json', './data/pads/ascent.json', './data/pads/eog.json', './data/pads/gulfport.json',
   './data/pads/infinity.json', './data/pads/expand.json', './data/pads/tiburon.json', './data/pads/frac.json',
   './data/pads/disposal.json',
+  // shared road rule sets (v31.9) - tools/pads.py RULES; refreshed like the pad files
+  './data/rules.json',
   './icon-192.png', './icon-512.png', './icon-180.png', './img/titan-logo.png', './img/favicon.png',
   './info/about.html', './info/contact.html', './info/calculator.html',
   './info/weather.html', './info/gulfport-kpa.html', './info/eog-reporting.html',
@@ -152,7 +154,7 @@ self.addEventListener('fetch', e => {
   // video: never cache (55MB + range/206 requests break Cache API) — let the browser stream it
   if (url.pathname.includes('/videos/')) return;
 
-  if (url.pathname.includes('/data/pads/')) {
+  if (url.pathname.includes('/data/pads/') || url.pathname.endsWith('/data/rules.json')) {
     // pad cards: stale-while-revalidate - the saved copy at once (no waiting on one bar of signal), a fresh one
     // fetched behind it; if it changed, the page is told so it can show it at a quiet moment
     const key = keyOf(e.request);

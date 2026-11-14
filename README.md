@@ -32,3 +32,24 @@ a route map, commit it to the files repo first, then point the card at `pdfs/...
 titanenergytech.com subdomain later: add a CNAME record, set the custom domain on that repo, and change `FILES` in
 sw.js, 404.html, info/safety-video.html and tools/build_pages.py. History was not rewritten (.git here still holds
 the old PDFs; deploys only upload the current files).
+
+## Shared road rules and alert end dates (v31.9)
+Rules that apply to a group of pads live once in `data/rules.json` as named rule sets, not copied onto each card:
+`{"eog-cutler-rd": {"name": "...", "rules": [{"t": "CUTLER RD: 25 MPH MAX, no exceptions.", "added": "2026-11-12",
+"temp": false, "from": "EOG vendor call 11/12/2026"}, ...]}}`. Each rule has the same shape as a card alert, and
+`from` must say where it came from (the vendor call, a route map PDF or a TCP). A card follows a set with
+`"rules": ["eog-cutler-rd"]`. It can still have its own `"alert"` list for lines that fit only that pad. The card
+(and its pad/ page) shows the set's rules first, then its own alerts, as the same ROAD ALERT boxes. Edit the sets
+with `pads.load_rules` / `pads.save_rules`. The file is precached by sw.js and refreshed like the pad files.
+
+Any alert or rule can carry `"until": "YYYY-MM-DD"`. It shows through that day, then drops off by itself. Every
+`"temp": true` alert or rule must have an `until` date (use a review-by date if the real end is not known).
+
+`python tools/pads.py check` (the publish job runs it) fails with exit 1 when:
+- a card names a rule set that is not in `data/rules.json`
+- a `"temp": true` alert or rule has no `until`
+- a pad has a visible regular card and a visible frac card at the same time. While a frac runs, hide the regular
+  card with `"hidden": true` and `"goto": "<frac card id>"`; its links, stars, search and old pad/ page then open
+  the frac card (build_pages.py writes a forwarding page for it).
+- cards following the same set give different speeds for the same thing (Cutler Rd, lease road, on pad, a
+  10 MPH zone) in their own alerts, or a different speed than the set itself.
