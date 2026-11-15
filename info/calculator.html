@@ -32,6 +32,8 @@ input[type=number]:focus{border-color:var(--cyan);}
 .pp-v{font-size:15px;font-weight:700;line-height:1.3;}
 .pp-note{font-size:12px;color:#c9ced8;margin-top:8px;}
 .pp-note b{color:#fff;}
+.pp-warn{background:rgba(245,166,35,.2);border-left:4px solid #f5a623;border-radius:6px;padding:7px 10px;font-size:13.5px;font-weight:700;color:#ffd58a;margin-top:8px;} .pp-warn[hidden]{display:none;}
+#calcMsg{background:var(--card2);border:1px solid var(--line);border-left:4px solid var(--cyan);border-radius:10px;padding:12px 14px;margin:14px 0;font-size:15px;font-weight:700;text-align:center;} #calcMsg[hidden]{display:none;}
 .overfill{color:#ff8a8a;font-weight:800;font-size:13px;margin-top:6px;}
 .bpinote{background:rgba(245,166,35,.16);border:1px solid rgba(245,166,35,.55);border-left:4px solid #f5a623;border-radius:8px;padding:10px 12px;font-size:14px;margin:12px 0 4px;} .bpinote[hidden]{display:none;}
 
@@ -56,6 +58,7 @@ input[type=number]:focus{border-color:var(--cyan);}
     <div><div class="pp-l">Buffer</div><div class="pp-v" id="ppBuf">&ndash;</div></div>
   </div>
   <div class="pp-note" id="ppNote"></div>
+  <div class="pp-warn" id="ppWarn" hidden></div>
 </div>
 <div id="bpiNote" class="bpinote" hidden>&#9888;&#65039; <b>Non-standard tank strapping:</b> using <b><span id="bpiVal">1.17</span> bbl per inch</b> for <span id="bpiPad">this pad</span>. Standard tanks are 1.67.</div>
 
@@ -80,7 +83,7 @@ input[type=number]:focus{border-color:var(--cyan);}
 <div class="field"><input type="number" id="tanks" min="1" max="8" inputmode="numeric" value="1"><span>tanks</span></div>
 <div class="chips" id="tankchips">
   <div class="chip on" data-v="1">1 tank</div><div class="chip" data-v="2">2</div>
-  <div class="chip" data-v="3">3 (EOG)</div><div class="chip" data-v="4">4</div>
+  <div class="chip" data-v="3">3 (EOG)</div><div class="chip" data-v="4">4</div><div class="chip" data-v="5">5</div>
 </div>
 <label>Load size</label>
 <div class="field"><input type="number" id="load" min="0" inputmode="decimal" placeholder="130"><span>bbl</span></div>
@@ -96,6 +99,7 @@ input[type=number]:focus{border-color:var(--cyan);}
 <div class="hint"><b>Whitacre 701 is strapped at 1.17 bbl per inch</b>, not the standard 1.67 &mdash; pick it here or open the calculator from the Whitacre 701 card. Most other 500-bbl tanks are 1.67. If a pad card shows a different factor, use it.</div>
 </div>
 
+<div id="calcMsg" hidden></div>
 <div id="verdict"></div>
 <div class="card" id="statsCard" style="display:none">
   <div class="stats">
@@ -123,6 +127,8 @@ function renderTanks(){
   if(n>1){
     let cur = mt.querySelectorAll('.trow').length;
     if(cur !== n){
+      const keep = [];   // readings already typed, so changing the count doesn't wipe them
+      for(let i=1;i<=cur;i++){ const f=$('t'+i+'_ft'), r=$('t'+i+'_in'); keep.push([f?f.value:'', r?r.value:'']); }
       let hh = '<label>Interface level — gauge EVERY tank (oil on top makes them sit at different levels)</label>';
       for(let i=1;i<=n;i++){
         hh += '<div class="row trow" style="margin-bottom:8px"><div style="flex:0 0 62px;align-self:center;font-weight:800;color:var(--dim);font-size:13px;">Tank '+i+'</div>'+
@@ -130,12 +136,21 @@ function renderTanks(){
               '<div class="field"><input type="number" id="t'+i+'_in" min="0" inputmode="decimal" placeholder="0"><span>in</span></div></div>';
       }
       mt.innerHTML = hh;
+      for(let i=1;i<=Math.min(n, keep.length);i++){ $('t'+i+'_ft').value=keep[i-1][0]; $('t'+i+'_in').value=keep[i-1][1]; }
       mt.querySelectorAll('input').forEach(i=>i.addEventListener('input', calc));
     }
   }
 }
+// Wipe the last answer so an old verdict never sits on screen next to new readings; msg (optional) says what's missing.
+function clearResult(msg){
+  const v=$('verdict'); v.className=''; v.innerHTML='';
+  $('statsCard').style.display='none';
+  const over=$('overfill'); if(over) over.textContent='';
+  const m=$('calcMsg'); m.textContent=msg||''; m.hidden=!msg;
+}
 function calc(){
   const n = tankCount();
+  padPanel(n);
   const rate = bpi() * n; syncBpi();
   const buf  = parseFloat($('buf').value);
   const load = parseFloat($('load').value);
@@ -149,11 +164,14 @@ function calc(){
       const el=$('t'+i+'_ft'); if(!el) { renderTanks(); return; }
       vals.push(inches($('t'+i+'_ft').value, $('t'+i+'_in').value));
     }
-    if(vals.some(x=>!x)){ v.className=''; sc.style.display='none'; return; }
+    const got = vals.filter(x=>x>0).length;
+    if(got < n){ clearResult(got ? 'Enter a reading for every tank ('+got+' of '+n+' entered)' : ''); return; }
     intf = Math.min.apply(null, vals); hiRead = Math.max.apply(null, vals);
     lowTank = vals.indexOf(intf)+1;
   }
-  if(!intf || isNaN(buf)){ v.className=''; sc.style.display='none'; return; }
+  if(!intf){ clearResult(''); return; }
+  if(isNaN(buf)){ clearResult('Enter the tank buffer'); return; }
+  $('calcMsg').hidden=true;
   const usable = intf - buf;
   const bbls = Math.max(0, usable) * rate;
   sc.style.display='block';
@@ -164,7 +182,7 @@ function calc(){
   const HT = parseInt(p.get('height')) || 0;
   let over = document.getElementById('overfill'); if(!over){ over=document.createElement('div'); over.id='overfill'; over.className='overfill'; sc.parentNode.insertBefore(over, sc); }
   over.textContent = (HT && hiRead > HT) ? '\u26A0 A reading of '+fmtFtIn(hiRead)+' is above the tank height ('+fmtFtIn(HT)+') \u2014 re-check the gauge.' : '';
-  if(isNaN(load) || load<=0){ v.className=''; return; }
+  if(isNaN(load) || load<=0){ v.className=''; v.innerHTML=''; return; }
   const lowNote = n>1 ? ' Tank '+lowTank+' has the lowest water — it hits the buffer first and sets the limit.' : '';
   if(bbls >= load){
     v.className='ok';
@@ -185,7 +203,7 @@ function chipRow(rowId, inputId){
 }
 chipRow('bufchips','buf'); chipRow('loadchips','load'); chipRow('tankchips','tanks'); chipRow('bpichips','bpi');
 $('bpichips').addEventListener('click', e=>{ const c=e.target.closest('.chip'); if(c){ $('bpiPad').textContent = c.dataset.pad || 'this pad'; syncBpi(); } });
-$('tanks').addEventListener('input', ()=>{ renderTanks(); calc(); });
+$('tanks').addEventListener('input', ()=>{ const n=tankCount(); document.querySelectorAll('#tankchips .chip').forEach(c=>c.classList.toggle('on', parseInt(c.dataset.v)===n)); renderTanks(); calc(); });
 document.getElementById('tankchips').addEventListener('click', ()=>{ renderTanks(); calc(); });
 // prefill from ?buffer=30&load=130
 if(p.get('buffer')){ $('buf').value = p.get('buffer'); }
@@ -193,16 +211,22 @@ if(p.get('load')){ $('load').value = p.get('load'); }
 if(p.get('tanks')){ $('tanks').value = p.get('tanks'); }
 if(p.get('bpi')){ $('bpi').value = p.get('bpi'); }
 if(p.get('pad')){ $('bpiPad').textContent = p.get('pad'); }
-(function(){
-  if(!p.get('pad')) return;
-  const n=parseInt(p.get('tanks'))||1, size=p.get('size'), dia=p.get('dia'), ht=parseInt(p.get('height'))||0, b=parseFloat(p.get('bpi'))||1.67, buf=parseFloat(p.get('buffer'))||parseFloat($('buf').value)||0;
+// Pad panel: pad facts come from the card link; the buffer total and formula follow the tank count picked here.
+const PAD = p.get('pad') ? {n: parseInt(p.get('tanks'))||1, size: p.get('size'), dia: p.get('dia'), ht: parseInt(p.get('height'))||0,
+  b: parseFloat(p.get('bpi'))||1.67, buf: parseFloat(p.get('buffer'))||parseFloat($('buf').value)||0} : null;
+function padPanel(sel){
+  if(!PAD) return;
+  const {n, size, dia, ht, b, buf} = PAD;
   $('padPanel').hidden=false; $('ppPad').textContent=p.get('pad');
   $('ppTanks').textContent = n + (n>1?' tanks, equalized':' tank');
-  $('ppSize').textContent = (size? size+' bbl' : '\u2013') + (dia? ' \u00b7 '+dia+'\u2032 dia' : '') + (ht? ' \u00d7 '+Math.floor(ht/12)+'\u2032 tall ('+ht+'\u2033)' : '');
-  $('ppBpi').textContent = b.toFixed(2)+' bbl per inch' + (Math.abs(b-1.67)>0.005 ? ' \u2014 NOT standard' : '');
-  $('ppBuf').textContent = buf ? buf+'\u2033 = '+Math.round(buf*b)+' bbl per tank'+(n>1?' ('+Math.round(buf*b*n)+' bbl total)':'') : '\u2013';
-  $('ppNote').innerHTML = 'Available water = (interface \u2212 '+buf+'\u2033) \u00d7 '+b.toFixed(2)+' bbl/in' + (n>1 ? ' \u00d7 '+n+' tanks, using the <b>lowest</b> tank\u2019s interface.' : '.') + (size&&ht ? ' A full tank reads '+ht+'\u2033 = about '+Math.round(ht*b)+' bbl.' : '');
-})();
+  $('ppSize').textContent = (size? size+' bbl' : '–') + (dia? ' · '+dia+'′ dia' : '') + (ht? ' × '+Math.floor(ht/12)+'′ tall ('+ht+'″)' : '');
+  $('ppBpi').textContent = b.toFixed(2)+' bbl per inch' + (Math.abs(b-1.67)>0.005 ? ' — NOT standard' : '');
+  $('ppBuf').textContent = buf ? buf+'″ = '+Math.round(buf*b)+' bbl per tank'+(sel>1?' ('+Math.round(buf*b*sel)+' bbl total'+(sel!==n?' for '+sel+' tanks':'')+')':'') : '–';
+  $('ppNote').innerHTML = 'Available water = (interface − '+buf+'″) × '+b.toFixed(2)+' bbl/in' + (sel>1 ? ' × '+sel+' tanks, using the <b>lowest</b> tank’s interface.' : '.') + (size&&ht ? ' A full tank reads '+ht+'″ = about '+Math.round(ht*b)+' bbl.' : '');
+  const w=$('ppWarn');
+  w.hidden = sel===n;
+  w.textContent = sel===n ? '' : '⚠ This pad has '+n+' tank'+(n>1?'s':'')+'. You have '+sel+' selected.';
+}
 if(p.get('height')){ const hin=parseInt(p.get('height')); if(hin>0){ const n=document.createElement('div'); n.className='hint'; n.style.margin='-4px 0 10px'; n.innerHTML='Tank height at this pad: <b>'+Math.floor(hin/12)+'&prime; ('+hin+'&quot;)</b> &mdash; interface can&rsquo;t read higher than that.'; $('singleTank').appendChild(n); } }
 // reflect prefilled values in the chip rows
 [['bufchips','buf'],['tankchips','tanks'],['loadchips','load'],['bpichips','bpi']].forEach(([row,id])=>{ const v=parseFloat($(id).value); document.querySelectorAll('#'+row+' .chip').forEach(c=>c.classList.toggle('on', Math.abs(parseFloat(c.dataset.v)-v)<0.005)); });
