@@ -562,7 +562,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v31.9 — Nov 2026";
+const VERSION = "v32.0 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1054,10 +1054,12 @@ function dirUrl(p, wps){
   return 'https://www.google.com/maps/dir/?api=1&destination='+p[0]+','+p[1]
     + (wps && wps.length ? '&waypoints='+wps.map(q=>q[0]+','+q[1]).join('%7C') : '') + '&travelmode=driving';
 }
-// the gate trucks actually use (data/approaches.json, from GPS) beats the card pin, which is often the wellhead
+// the gate trucks actually use (data/approaches.json, from GPS) beats the card pin, which is often the wellhead.
+// A.gate (v32.0, Rick 11/15): Google drives our trucks' lease road past that turn-off to the pad's edge
+// (tools/route-miner/gate_test.py), so Navigate ends at the pad, not at a turn Google never announces
 function pinUrl(d){
   const A = APPROACHES[d._id];
-  const p = (A && A.entrance) ? A.entrance : [d.lat, d.lon];
+  const p = (A && (A.gate || A.entrance)) ? (A.gate || A.entrance) : [d.lat, d.lon];
   return dirUrl(p, null);
 }
 function bearingDeg(a, b){
@@ -1094,7 +1096,7 @@ function pickApproach(A, me){
 function truckUrl(A, a, me){
   // nav_to: the official route runs through a private lease road Google won't drive (Folsam via the
   // Griffeth lease road), so Navigate ends at the turn-off onto it and the card's directions take over
-  const e=a.nav_to||A.entrance, here=onPath(a, me);
+  const e=a.nav_to||A.gate||A.entrance, here=onPath(a, me);
   // every waypoint stays unless the driver is already on this approach's road, past it
   const wps=(a.waypoints||[]).filter(p=> here[1] > 0.3 || onPath(a, p)[0] > here[0]);
   return dirUrl(e, (here[1] > 0.3 ? feederWps(a, me) : []).concat(wps));

@@ -33,6 +33,10 @@ titanenergytech.com subdomain later: add a CNAME record, set the custom domain o
 sw.js, 404.html, info/safety-video.html and tools/build_pages.py. History was not rewritten (.git here still holds
 the old PDFs; deploys only upload the current files).
 
+## Navigate ends at the pad gate (v32.0)
+
+Rick, 11/15, after truck 141 went half a mile past the Gulfport Robert turn-off: Navigate used to end at the mined entrance (where trucks leave the OpenStreetMap road network), so Google said "arrived" at the lease-road turn and never announced it. `tools/route-miner/gate_test.py` (titan-dispatch) asks Google to drive each pad from ~800 m before the entrance; when Google passes the entrance, follows our trucks' own GPS (90%+) and ends at the pad's edge, the card gets `gate` in data/approaches.json and Navigate (`pinUrl`, `truckUrl`) ends there. `nav_to` (private-road cuts) still wins. 68 of 165 cards have a gate. The daily Google task tests new or moved pads.
+
 ## Shared road rules and alert end dates (v31.9)
 Rules that apply to a group of pads live once in `data/rules.json` as named rule sets, not copied onto each card:
 `{"eog-cutler-rd": {"name": "...", "rules": [{"t": "CUTLER RD: 25 MPH MAX, no exceptions.", "added": "2026-11-12",
