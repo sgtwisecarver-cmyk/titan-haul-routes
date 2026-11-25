@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v33.0 — Nov 2026";
+const VERSION = "v33.1 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1869,13 +1869,20 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // never edit by hand). Busier roads cost less, service roads / tracks more. Voice directions: v32.7 below.
 // Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
 // and never used a road no Titan truck drives.
-// v33.0 (Rick OK 11/25): the pads that passed the fair test - truck_net.py --check-all (titan-dispatch
-// tools/route-miner/truck-nav-check.md): 20+ trips in the last month routed on a road map built only from earlier GPS,
-// median 90%+ on the roads the driver actually took. Lambeau also passed but its card is hidden (frac).
-const TNAV_CARDS = new Set(['eog-shula', 'eog-hollyfield-watkins-haul-route', 'eog-lloyd-smith-cr-org-pad', 'eog-toot-cr-mon-pad',
-  'eog-watkins-34-14-6-pad', 'eog-edison-ruby-cr-org-pad', 'eog-windy-ridge-platform-cr-org-pad', 'eog-oliver-cr-mon-pad',
-  'disposal-eog-tus-chk-tus-swd', 'eog-snyder-cr-uni-pad', 'expand-rothenbuler-f-mnr', 'ascent-rock-ridge', 'eog-krantz-cr-mon-pad',
-  'eog-davis-trust-19-11-5-pad', 'expand-fuchs-dietrich-a', 'expand-craig-miller']);
+// v33.1 (Rick OK 11/25): the pads that pass the fair test - truck_net.py --check-all (titan-dispatch
+// tools/route-miner/truck-nav-check.md): 10+ trips in the last month routed on a road map built only from earlier GPS,
+// median 85%+ on the roads the driver actually took and 90%+ on 60%+ of trips. Routes go by drive time and favor
+// interstates, US and state routes (Rick: "always prefer state routes and interstate if possible"). Hidden cards left off.
+const TNAV_CARDS = new Set(['expand-mcfrederick', 'gulfport-harvey-haul-route', 'gulfport-reed-haul-route',
+  'eog-shula', 'eog-sproul-tc-rsh-pad', 'eog-hollyfield-watkins-haul-route', 'gulfport-campbell-haul-route',
+  'gulfport-west-haul-route', 'eog-lloyd-smith-cr-org-pad', 'eog-toot-cr-mon-pad', 'eog-watkins-34-14-6-pad',
+  'eog-edison-ruby-cr-org-pad', 'gulfport-jac-haul-route', 'eog-windy-ridge-platform-cr-org-pad',
+  'eog-oliver-cr-mon-pad', 'expand-emerson-belle', 'disposal-eog-tus-chk-tus-swd', 'gulfport-valerie-haul-route',
+  'eog-snyder-cr-uni-pad', 'gulfport-westhawk-haul-route', 'expand-rothenbuler-f-mnr', 'eog-pearley-tc-per-pad',
+  'eog-krantz-cr-mon-pad', 'ascent-donna-lnd-gr', 'eog-davis-trust-19-11-5-pad', 'expand-fuchs-dietrich-a',
+  'expand-craig-miller', 'expand-wiley', 'eog-berger-tc-per-pad', 'gulfport-paulus-haul-route', 'eog-cobalt',
+  'eog-deucker-27-12-5-pad', 'gulfport-donato-haul-route', 'eog-wendell-cr-org-pad', 'expand-pittman-pad-2',
+  'expand-randall', 'gulfport-arnold-haul-route']);
 let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null, TNAV_AUTO = null;
 const EMPTY_FC = {type:'FeatureCollection', features:[]};
 function loadTnet(){
@@ -2115,9 +2122,9 @@ function vnBuild(d, r){
   return V;
 }
 // a pad name the phone can say and a driver knows: TOOT CR MON PAD -> Toot, WATKINS 34-14-6 PAD -> Watkins 34-14-6,
-// Hollyfield & Watkins Haul Route -> Hollyfield and Watkins, EOG TUS (CHK TUS SWD) -> EOG TUS
+// Hollyfield & Watkins Haul Route -> Hollyfield and Watkins, EOG TUS (CHK TUS SWD) -> EOG TUS, SPROUL TC RSH PAD -> Sproul
 function vnPadName(d){
-  let t = String(d.pad || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bhaul route\b/i, '').replace(/\s+(CR\s+)?(ORG|MON|UNI)\s+PAD\b/i, '')
+  let t = String(d.pad || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bhaul route\b/i, '').replace(/\s+((CR|TC)\s+)?[A-Z]{3}\s+PAD\b/, '').replace(/\s+LND\s+GR\b/i, '')
     .replace(/\s+(PAD|MNR)\b/i, '').replace(/\s+[A-Z]$/, '').replace(/\s*\/\s*/g, ' ').replace(/&/g, 'and').replace(/\s+/g, ' ').trim();
   if(t === t.toUpperCase()) t = t.toLowerCase().replace(/\b[a-z]/g, c=>c.toUpperCase()).replace(/\bEog\b/g, 'EOG').replace(/\bTus\b/g, 'TUS');
   return t || d.pad;
