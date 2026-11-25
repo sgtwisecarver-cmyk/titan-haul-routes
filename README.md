@@ -37,6 +37,19 @@ the old PDFs; deploys only upload the current files).
 
 Rick, 11/15, after truck 141 went half a mile past the Gulfport Robert turn-off: Navigate used to end at the mined entrance (where trucks leave the OpenStreetMap road network), so Google said "arrived" at the lease-road turn and never announced it. `tools/route-miner/gate_test.py` (titan-dispatch) asks Google to drive each pad from ~800 m before the entrance; when Google passes the entrance, follows our trucks' own GPS (90%+) and ends at the pad's edge, the card gets `gate` in data/approaches.json and Navigate (`pinUrl`, `truckUrl`) ends there. `nav_to` (private-road cuts) still wins. 68 of 165 cards have a gate. The daily Google task tests new or moved pads.
 
+## Truck-road route, pilot on Shula (v32.6)
+
+Rick, 11/25: navigation inside the app, on the roads Titan trucks actually drive. `data/trucknet.json` (~1 MB, 0.3 MB
+gzipped) is every road piece trucks drove on 2+ truck-days since 9/27, joined into links between junctions, built by
+`tools/route-miner/truck_net.py` in titan-dispatch from the map-matched truck GPS - never edit it by hand. On the map,
+a pad in `TNAV_CARDS` (index.html; only `eog-shula` for now) gets **Truck route from here**: the phone works out the
+cheapest route to the pad's mined entrance on that network (busier roads cost less, service roads / tracks 3x more),
+draws it green (dashed from you to the nearest truck road when you're off it) and lists the roads with miles. Map only:
+no voice or turn prompts yet. Rick's Shula test (155 real trips since 10/25, routes built only from earlier GPS):
+the route matched the driver's own roads 89% vs Google 40-50%, and never used a road no Titan truck drives.
+`python truck_net.py --check eog-shula` re-checks a card against the last month's trips. Not precached yet: the
+file is saved by the service worker the first time someone asks for a truck route.
+
 ## Shared road rules and alert end dates (v31.9)
 Rules that apply to a group of pads live once in `data/rules.json` as named rule sets, not copied onto each card:
 `{"eog-cutler-rd": {"name": "...", "rules": [{"t": "CUTLER RD: 25 MPH MAX, no exceptions.", "added": "2026-11-12",

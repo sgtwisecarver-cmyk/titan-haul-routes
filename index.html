@@ -392,6 +392,13 @@ window.TITAN_PADS=(function(){
   .mvline{margin-top:10px; font-size:14.5px; line-height:1.4;}
   .mvline.way{display:flex; gap:8px; align-items:flex-start; color:var(--dim);}
   .mvline.way i{flex:0 0 auto; width:26px; height:6px; margin-top:8px; border-radius:3px; background:#1f7cff; box-shadow:0 0 0 2px #fff;}
+  /* v32.6 truck-road route (pilot) */
+  .mvline.tnav{display:flex; gap:8px; align-items:flex-start; color:var(--dim);}
+  .mvline.tnav i{flex:0 0 auto; width:26px; height:7px; margin-top:8px; border-radius:3px; background:#12a150; box-shadow:0 0 0 2px #fff;}
+  .tnavnote{margin-top:8px; font-size:14px;}
+  .tnavroads{margin:8px 0 0; padding-left:22px; font-size:14px; line-height:1.45;}
+  .tnavroads span{color:var(--dim); white-space:nowrap;}
+  .btn.tnavb{flex:1 1 100%;}
   .mvsheet .btnrow{margin-top:12px;}
   .mvsheet .btn{min-width:120px;}
   .brg{display:flex; align-items:center; gap:10px;}
@@ -562,7 +569,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v32.5 — Nov 2026";
+const VERSION = "v32.6 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1510,6 +1517,14 @@ function addOverlays(){
               paint:{'line-color':'#ffffff', 'line-width':['interpolate',['linear'],['zoom'],10,5,16,11]}});
   addLyr(m, {id:'way', type:'line', source:'way', filter:['==','$type','LineString'], layout:{'line-cap':'round','line-join':'round'},
               paint:{'line-color':'#1f7cff', 'line-width':['interpolate',['linear'],['zoom'],10,3,16,7]}});
+  // v32.6 truck-road route (green; dashed = getting onto the truck roads)
+  addSrc(m, 'tnav', {type:'geojson', data:tnavGeo()});
+  addLyr(m, {id:'tnav-case', type:'line', source:'tnav', filter:['!has','c'], layout:{'line-cap':'round','line-join':'round'},
+              paint:{'line-color':'#ffffff', 'line-width':['interpolate',['linear'],['zoom'],10,7,16,14]}});
+  addLyr(m, {id:'tnav', type:'line', source:'tnav', filter:['!has','c'], layout:{'line-cap':'round','line-join':'round'},
+              paint:{'line-color':'#12a150', 'line-width':['interpolate',['linear'],['zoom'],10,4,16,9]}});
+  addLyr(m, {id:'tnav-conn', type:'line', source:'tnav', filter:['has','c'], layout:{'line-cap':'round'},
+              paint:{'line-color':'#12a150', 'line-width':3, 'line-dasharray':[1.5, 1.5]}});
   addLyr(m, {id:'way-in', type:'circle', source:'way', filter:['==','$type','Point'],
               paint:{'circle-radius':7, 'circle-color':'#1f7cff', 'circle-stroke-color':'#fff', 'circle-stroke-width':3}});
   // bridges are diamonds (pads are dots): yellow / orange / red, black with a red edge when closed
@@ -1569,6 +1584,7 @@ function loadBridges(){
 function closeSheets(){ mapSheet.hidden = true; mapLayers.hidden = true; document.getElementById('mapLayersBtn').classList.remove('on'); }
 function selectPad(d, fly){
   if(MAPSEL !== d) resetRoute();
+  if(TNAV_ID && TNAV_ID !== d._id) clearTnav();
   MAPSEL = d; mapLayers.hidden = true; wakeAudio();
   if(routeWays(d).length && MEWATCH === null && navigator.permissions && navigator.geolocation)   // a truck route: follow along if location is already allowed
     navigator.permissions.query({name:'geolocation'}).then(st=>{ if(st.state==='granted' && !mapEl.hidden && MAPSEL===d) watchMe(); }).catch(()=>{}); document.getElementById('mapLayersBtn').classList.remove('on');
@@ -1585,8 +1601,12 @@ function selectPad(d, fly){
   if(ways.length) h += '<div class="mvline way"><i></i><span><b>Blue line:</b> the road Titan trucks use into this pad'
                      + (ways.length>1 ? ' ('+ways.length+' ways in)' : '')+', from truck GPS. The written haul route on the card rules.</span></div>';
   h += '<div class="btnrow"><a class="btn nav" target="_blank" rel="noopener" href="'+escAttr(pinUrl(d))+'">\u{1F9ED} Navigate</a>'
-     + '<button type="button" class="btn pdf mvcard">\u{1F4CB} Route card</button></div>';
+     + '<button type="button" class="btn pdf mvcard">\u{1F4CB} Route card</button>'
+     + (TNAV_CARDS.has(d._id) ? '<button type="button" class="btn pdf tnavb">\u{1F69A} Truck route from here</button>' : '')
+     + '</div>' + (TNAV_CARDS.has(d._id) ? '<div class="tnavinfo"></div>' : '');
   mapSheet.innerHTML = h; mapSheet.hidden = false; mapSheet.scrollTop = 0;
+  const tb = mapSheet.querySelector('.tnavb');
+  if(tb) tb.addEventListener('click', ()=>truckRoute(d, tb, mapSheet.querySelector('.tnavinfo')));
   const nb = mapSheet.querySelector('.btn.nav');
   nb.addEventListener('click', ev=>{ ev.preventDefault(); truckNav(d, nb, mapSheet); });
   mapSheet.querySelector('.mvcard').addEventListener('click', ()=>{ closeMap(); openCard(d); });
@@ -1599,7 +1619,7 @@ function selectPad(d, fly){
   }
 }
 function showBridge(b){
-  MAPSEL = null;
+  MAPSEL = null; clearTnav();
   if(MAP && MAP.getSource('way')){ MAP.getSource('way').setData(wayGeo(null)); MAP.setFilter('pads-sel', ['==',['get','id'],'']); }
   const L = BRIDGE[b.v], rows = [];
   if(b.on) rows.push(['Carries', b.on]);
@@ -1817,6 +1837,146 @@ function checkRoute(acc){
 document.getElementById('mapSndTog').addEventListener('click', ()=>{
   OFFSOUND = !OFFSOUND; lsSet('titan_offroute_sound', OFFSOUND); paintMapUI(); if(OFFSOUND){ wakeAudio(); alarm(); }
 });
+// ===== v32.6: truck-road route (pilot: Shula) =====
+// A route on roads Titan trucks have actually driven, worked out on the phone. data/trucknet.json is every road
+// piece trucks drove on 2+ days, from truck GPS (tools/route-miner/truck_net.py in titan-dispatch, rebuilt weekly;
+// never edit by hand). Busier roads cost less, service roads / tracks more. Map only for now: no voice yet.
+// Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
+// and never used a road no Titan truck drives.
+const TNAV_CARDS = new Set(['eog-shula']);
+let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null;
+const EMPTY_FC = {type:'FeatureCollection', features:[]};
+function loadTnet(){
+  if(TNET) return Promise.resolve(TNET);
+  if(TNETLOAD) return TNETLOAD;
+  TNETLOAD = fetch('data/trucknet.json').then(r=>{ if(!r.ok) throw new Error('trucknet '+r.status); return r.json(); }).then(j=>{
+    const n = j.nodes.length/2, lat = new Float64Array(n), lon = new Float64Array(n), adj = Array.from({length:n}, ()=>[]);
+    for(let i=0; i<n; i++){ lat[i] = j.nodes[2*i]/1e5; lon[i] = j.nodes[2*i+1]/1e5; }
+    j.links.forEach((l, i)=>{ adj[l[0]].push(i); adj[l[1]].push(i); });
+    return TNET = {lat, lon, adj, links:j.links, names:j.names, generated:j.generated};
+  }).catch(e=>{ TNETLOAD = null; throw e; });
+  return TNETLOAD;
+}
+// a link's points [lat, lon], from its first junction to its second
+function tLine(N, i){
+  const l = N.links[i], inn = l[6], pts = [[N.lat[l[0]], N.lon[l[0]]]];
+  let la = Math.round(N.lat[l[0]]*1e5), lo = Math.round(N.lon[l[0]]*1e5);
+  for(let k=0; k<inn.length; k+=2){ la += inn[k]; lo += inn[k+1]; pts.push([la/1e5, lo/1e5]); }
+  pts.push([N.lat[l[1]], N.lon[l[1]]]);
+  return pts;
+}
+// cheapest way from every junction to dest (Dijkstra with a binary heap); via[u] = the link to take from u
+function tTree(N, dest){
+  const n = N.lat.length, dist = new Float64Array(n).fill(Infinity), via = new Int32Array(n).fill(-1), h = [];
+  const push = (c, u)=>{ h.push([c, u]); let i = h.length-1; while(i){ const p = (i-1)>>1; if(h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
+  const pop = ()=>{ const top = h[0], last = h.pop(); if(h.length){ h[0] = last; let i = 0;
+    for(;;){ const a = 2*i+1, b = a+1; let m = i; if(a < h.length && h[a][0] < h[m][0]) m = a; if(b < h.length && h[b][0] < h[m][0]) m = b;
+             if(m === i) break; [h[m], h[i]] = [h[i], h[m]]; i = m; } } return top; };
+  dist[dest] = 0; push(0, dest);
+  while(h.length){
+    const [c, u] = pop(); if(c > dist[u]) continue;
+    for(const i of N.adj[u]){ const l = N.links[i], v = l[0]===u ? l[1] : l[0], nc = c + l[4];
+      if(nc < dist[v]){ dist[v] = nc; via[v] = i; push(nc, v); } }
+  }
+  return {dest, dist, via};
+}
+function pathLen(p){ let m = 0; for(let i=1; i<p.length; i++) m += distM(p[i-1][0], p[i-1][1], p[i][0], p[i][1]); return m; }
+// the route from `me` (lat, lon) to dest: join the nearest truck road at the nearest point, then head for whichever
+// end of that road is cheaper to the pad. -> {line, join_m, legs:[[name, metres]], metres} or null
+function tRoute(N, T, me){
+  let best = null;
+  N.links.forEach((l, i)=>{
+    const pts = tLine(N, i);
+    for(let k=0; k<pts.length; k++){ const d = distM(me[0], me[1], pts[k][0], pts[k][1]); if(!best || d < best.d) best = {d, i, k, pts}; }
+  });
+  if(!best || best.d > 50000) return null;
+  const l = N.links[best.i], toA = best.pts.slice(0, best.k+1).reverse(), toB = best.pts.slice(best.k);
+  const frac = p => l[3] ? pathLen(p)/l[3] : 0;
+  const cA = T.dist[l[0]] + l[4]*frac(toA), cB = T.dist[l[1]] + l[4]*frac(toB);
+  if(!isFinite(cA) && !isFinite(cB)) return null;
+  let line = cA <= cB ? toA : toB, u = cA <= cB ? l[0] : l[1];
+  const legs = [[N.names[l[2]], pathLen(line)]];
+  while(T.via[u] >= 0){
+    const i = T.via[u], m = N.links[i], p = tLine(N, i), fwd = m[0]===u;
+    line = line.concat((fwd ? p : p.reverse()).slice(1));
+    const nm = N.names[m[2]];
+    if(legs.length && legs[legs.length-1][0]===nm) legs[legs.length-1][1] += m[3]; else legs.push([nm, m[3]]);
+    u = fwd ? m[1] : m[0];
+  }
+  return {line, join_m:best.d, legs:legs.filter(g=>g[1] >= 30), metres:pathLen(line)};
+}
+const ROAD_ABBR = [[/\bNorthwest\b/g,'NW'],[/\bNortheast\b/g,'NE'],[/\bSouthwest\b/g,'SW'],[/\bSoutheast\b/g,'SE'],
+  [/\bRoad\b/g,'Rd'],[/\bAvenue\b/g,'Ave'],[/\bStreet\b/g,'St'],[/\bDrive\b/g,'Dr'],[/\bHighway\b/g,'Hwy'],[/\bLane\b/g,'Ln']];
+function abbr(s){ return ROAD_ABBR.reduce((t, [re, r])=>t.replace(re, r), s); }
+// "West High Avenue | US 250 Business | SR 39" -> {name:'West High Ave', refs:['US 250 Business','SR 39']}
+function roadParts(s){
+  const p = (s||'').split(' | ').filter(Boolean), isRef = x => /^(SR|US|I|CR|TR|TH|County Road|Township Road)\s/.test(x) || /^State Route \d/.test(x);
+  const refs = p.filter(isRef).map(x=>x.replace(/^State Route /, 'SR ')), names = p.filter(x=>!isRef(x) && !/^State Route\b/.test(x));
+  return {name: names[0] ? abbr(names[0]) : '', refs};
+}
+// consecutive pieces of one road join up: same name, or a shared route number (SR 39 through town keeps one line)
+function roadList(legs){
+  const out = [];
+  legs.forEach(([s, m])=>{
+    const r = roadParts(s), last = out[out.length-1];
+    const shared = last ? r.refs.filter(x=>last.refs.includes(x)) : [];
+    const base = n => n.replace(/\s+(NW|NE|SW|SE|N|S|E|W)$/, '');   // Cutler Rd SW -> Cutler Rd NE is one road
+    if(last && ((r.name && base(r.name)===base(last.name)) || shared.length)){
+      last.m += m; if(shared.length) last.refs = shared;
+      if(base(r.name) !== base(last.name)) last.name = ''; else if(r.name !== last.name) last.name = base(r.name);
+    } else out.push({name:r.name, refs:r.refs, m});
+  });
+  const rows = [];   // a short connector dropped from between two pieces of one road joins them back up
+  out.filter((g, i)=>g.m >= 160 || i===out.length-1).forEach(g=>{
+    const label = g.name && g.refs.length ? g.name+' ('+g.refs[0]+')' : (g.refs[0] || g.name || 'unnamed road');
+    if(rows.length && rows[rows.length-1].label===label) rows[rows.length-1].m += g.m; else rows.push({label, m:g.m});
+  });
+  return rows;
+}
+function tnavGeo(){ return TGEO || EMPTY_FC; }
+function clearTnav(){ TGEO = null; TNAV_ID = null; if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(EMPTY_FC); }
+// work out and draw the route from `me` to pad d; returns the route (or null) - the button calls it with the GPS fix
+function tnavShow(d, me, infoEl){
+  return loadTnet().then(N=>{
+    const A = APPROACHES[d._id], end = A && A.entrance ? A.entrance : (d.lat && d.lon ? [d.lat, d.lon] : null);
+    if(!end) return null;
+    let dest = 0, bd = Infinity;
+    for(let i=0; i<N.lat.length; i++){ const x = distM(end[0], end[1], N.lat[i], N.lon[i]); if(x < bd){ bd = x; dest = i; } }
+    if(!TTREE || TTREE.dest !== dest) TTREE = tTree(N, dest);
+    const r = tRoute(N, TTREE, me);
+    if(!r) return null;
+    const f = [{type:'Feature', geometry:{type:'LineString', coordinates:r.line.map(p=>[p[1], p[0]])}, properties:{}}];
+    if(r.join_m > 30) f.push({type:'Feature', geometry:{type:'LineString', coordinates:[[me[1], me[0]], [r.line[0][1], r.line[0][0]]]}, properties:{c:1}});
+    TGEO = {type:'FeatureCollection', features:f}; TNAV_ID = d._id;
+    if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(TGEO);
+    if(infoEl){
+      const mi = m => (m/1609.34).toFixed(m < 16093 ? 1 : 0)+' mi';
+      infoEl.innerHTML = '<div class="mvline tnav"><i></i><span><b>Green line: truck route, '+mi(r.metres)+'.</b> Only roads Titan trucks drive, from truck GPS. '
+        + 'Pilot &mdash; the written haul route on the card rules.</span></div>'
+        + (r.join_m > 150 ? '<div class="tnavnote">\u{1F4CD} You’re '+(r.join_m < 1609 ? Math.round(r.join_m/10)*10+' m' : mi(r.join_m))+' from the truck roads: get to the start of the green line first (dashed).</div>' : '')
+        + '<ol class="tnavroads">'+roadList(r.legs).map(g=>'<li><b>'+esc(g.label)+'</b> <span>'+mi(g.m)+'</span></li>').join('')+'</ol>';
+    }
+    if(MAP && window.maplibregl){
+      const b = new maplibregl.LngLatBounds([me[1], me[0]], [me[1], me[0]]); r.line.forEach(p=>b.extend([p[1], p[0]]));
+      // fit into the map left showing above the sheet (Shula's sheet is tall: five road alerts)
+      const below = mapSheet.hidden ? 40 : Math.min(mapSheet.offsetHeight + 16, innerHeight - 230);
+      MAP.fitBounds(b, {padding:{top:100, bottom:below, left:36, right:36}, maxZoom:15, duration:700});
+    }
+    if(infoEl) setTimeout(()=>infoEl.scrollIntoView({block:'nearest', behavior:'smooth'}), 50);
+    return r;
+  });
+}
+function truckRoute(d, btn, infoEl){
+  wakeAudio();
+  const idle = btn.innerHTML;
+  btn.disabled = true; btn.textContent = '\u{1F69A} Working out the truck route…';
+  const done = msg=>{ btn.disabled = false; btn.innerHTML = idle; if(msg) toast(msg); };
+  getLoc(()=>{
+    showMe(); watchMe();
+    tnavShow(d, [MY.lat, MY.lon], infoEl).then(r=>done(r ? '' : 'No truck route from here — use Navigate'))
+      .catch(()=>done('Couldn’t load the truck roads — check signal'));
+  }, ()=>done());
+}
 // ===== v30.8: save this area for offline =====
 // Saves what a driver needs to find a lease road with no signal, for the area on screen: the street map (OpenFreeMap
 // vector tiles to zoom 14 - the map draws closer zooms from them - plus its style, fonts and sprites) and the
