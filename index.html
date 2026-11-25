@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v32.7 — Nov 2026";
+const VERSION = "v32.8 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -918,6 +918,9 @@ function body(d){
          + '<button type="button" data-app="apple"'+(mapsApp()==='apple'?' class="on"':'')+'>Apple Maps</button></div>';
     if(TA && TA.approaches && TA.approaches.length)
       h += '<div class="navnote">\u{1F69A} Truck route on file \u2014 Navigate adds waypoints so your maps app follows the road trucks use into this pad.</div>';
+    // v32.8: the truck route + voice was only on the map pop-up; Rick looked on the card first (11/25)
+    if(TNAV_CARDS.has(d._id))
+      h += '<button type="button" class="btn pdf mapcardbtn tnavcardbtn">\u{1F69A} Truck route + voice directions</button>';
     h += '<button type="button" class="btn pdf mapcardbtn">\u{1F5FA}\ufe0f Show on map'+(TA && TA.approaches && TA.approaches.length ? ' \u00b7 truck way in' : '')+'</button>';
   }
   if(d.docs && d.docs.length){
@@ -1041,8 +1044,10 @@ function body(d){
   b.innerHTML = h;
   const nb = b.querySelector('.btn.nav');
   if(nb) nb.addEventListener('click', ev=>{ ev.preventDefault(); truckNav(d, nb, b); });
-  const mb = b.querySelector('.mapcardbtn');
+  const mb = b.querySelector('.mapcardbtn:not(.tnavcardbtn)');
   if(mb) mb.addEventListener('click', ()=>openMap(d));
+  const tcb = b.querySelector('.tnavcardbtn');
+  if(tcb) tcb.addEventListener('click', ()=>{ wakeAudio(); TNAV_AUTO = d._id; openMap(d); });
   b.querySelectorAll('.mapsapp button').forEach(x=>x.addEventListener('click', ()=>{
     lsSet('titan_maps', x.dataset.app);
     document.querySelectorAll('.mapsapp button').forEach(y=>y.classList.toggle('on', y.dataset.app===x.dataset.app));
@@ -1626,6 +1631,7 @@ function selectPad(d, fly){
   mapSheet.innerHTML = h; mapSheet.hidden = false; mapSheet.scrollTop = 0;
   const tb = mapSheet.querySelector('.tnavb');
   if(tb) tb.addEventListener('click', ()=>truckRoute(d, tb, mapSheet.querySelector('.tnavinfo')));
+  if(tb && TNAV_AUTO === d._id){ TNAV_AUTO = null; truckRoute(d, tb, mapSheet.querySelector('.tnavinfo')); }   // came from the card's button
   const nb = mapSheet.querySelector('.btn.nav');
   nb.addEventListener('click', ev=>{ ev.preventDefault(); truckNav(d, nb, mapSheet); });
   mapSheet.querySelector('.mvcard').addEventListener('click', ()=>{ closeMap(); openCard(d); });
@@ -1863,7 +1869,7 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
 // and never used a road no Titan truck drives.
 const TNAV_CARDS = new Set(['eog-shula']);
-let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null;
+let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null, TNAV_AUTO = null;
 const EMPTY_FC = {type:'FeatureCollection', features:[]};
 function loadTnet(){
   if(TNET) return Promise.resolve(TNET);
