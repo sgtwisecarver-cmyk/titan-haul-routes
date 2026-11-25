@@ -71,6 +71,9 @@ turn in a green banner with Voice on/off and Stop.
 - Checked on four real Shula trips replayed as GPS (11/25): from the yard it gave 15 lines in 16 miles, every turn
   matching the card (SR 39 → left on Beaver Ave staying on SR 39 → left on Cutler Rd → lease road on the right); on
   trips where the driver went his own way it settled down within about a mile.
+- v32.8 (Rick, 11/25: "I have Shula opened, I see nothing"): the Shula card itself now has **Truck route + voice
+  directions** under Navigate. It opens the map with `TNAV_AUTO` set, and `selectPad` runs the truck route as soon as
+  the pad's map sheet is up. Before, the button was only on the map pop-up.
 - The page calls `vnTick` on every GPS fix (`watchMe`); the GPS only runs with the map open and on screen.
 
 ## Shared road rules and alert end dates (v31.9)
