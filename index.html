@@ -434,6 +434,21 @@ window.TITAN_PADS=(function(){
   #offRoute span{display:block; font-size:15px; font-weight:600; margin-top:4px;}
   @keyframes offpulse{from{background:#c8101c;} to{background:#8f0a13;}}
   @media (prefers-reduced-motion: reduce){ #offRoute{animation:none;} }
+  /* v32.7 voice directions: the next turn, top of the map, readable at arm's length */
+  #vnavBar{position:absolute; left:10px; right:10px; top:calc(70px + env(safe-area-inset-top, 0px)); z-index:5; margin:0 auto; max-width:540px;
+           background:#0d6a33; color:#fff; border:2px solid #fff; border-radius:14px; padding:10px 14px; box-shadow:0 8px 28px rgba(0,0,0,.45);}
+  #vnavBar[hidden]{display:none;}
+  .vnmain{display:flex; gap:12px; align-items:center;}
+  .vnarrow{flex:0 0 48px; text-align:center; font:800 46px/1 var(--font-display);}
+  .vntxt{min-width:0;}
+  .vntxt b{display:block; font:800 30px/1.05 var(--font-display); letter-spacing:.5px;}
+  .vntxt span{display:block; font-size:19px; font-weight:700; margin-top:2px; overflow-wrap:anywhere;}
+  .vnfoot{display:flex; gap:8px; align-items:center; margin-top:8px; font-size:14px; font-weight:600;}
+  .vnfoot span{flex:1 1 auto; min-width:0;}
+  .vnfoot button{flex:0 0 auto; background:rgba(255,255,255,.16); color:#fff; border:1px solid rgba(255,255,255,.55); border-radius:10px;
+                 font:700 15px var(--font-body); padding:0 12px; min-height:44px;}
+  #mapview.vnav #offRoute, #mapview.vnav .maplibregl-ctrl-top-right{top:calc(200px + env(safe-area-inset-top, 0px));}
+  .btn.tnavgo{display:block; width:100%; margin-top:10px;}
 </style>
 </head>
 <body>
@@ -546,6 +561,10 @@ window.TITAN_PADS=(function(){
   </div>
   <div id="mapMsg" class="mvmsg">Loading map&hellip;</div>
   <div id="offRoute" hidden role="alert" aria-live="assertive"><b>&#9888; OFF THE TRUCK ROUTE</b><span id="offRouteTxt">Get back on the blue line when it&rsquo;s safe.</span></div>
+  <div id="vnavBar" hidden aria-live="polite">
+    <div class="vnmain"><span id="vnArrow" class="vnarrow" aria-hidden="true">&#8593;</span><div class="vntxt"><b id="vnDist"></b><span id="vnRoad"></span></div></div>
+    <div class="vnfoot"><span id="vnLeft"></span><button id="vnMute" type="button" aria-label="Voice on or off"></button><button id="vnStopBtn" type="button">Stop</button></div>
+  </div>
   <div id="mapLayers" class="mvpanel" hidden role="dialog" aria-label="Map layers">
     <div class="mvhead"><span class="mvname" style="font-size:20px">Map layers</span><button class="x" type="button" data-close aria-label="Close">&#10005;</button></div>
     <div class="mvrow"><span>Map<small>Satellite: the pad from above</small></span>
@@ -569,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v32.6 — Nov 2026";
+const VERSION = "v32.7 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1723,10 +1742,10 @@ function watchMe(){
   WATCH_WANTED = true;
   if(document.hidden) return;                                        // starts when the screen comes back (visibilitychange)
   MEWATCH = navigator.geolocation.watchPosition(p=>{ MY={lat:p.coords.latitude, lon:p.coords.longitude}; MYACC=p.coords.accuracy;
-                                                     showMe(); checkRoute(MYACC); }, ()=>{},
+                                                     showMe(); checkRoute(MYACC); vnTick(p.coords); }, ()=>{},
                                                 {enableHighAccuracy:true, maximumAge:5000});
 }
-function stopWatch(keep){ if(MEWATCH!==null){ navigator.geolocation.clearWatch(MEWATCH); MEWATCH=null; } if(!keep){ WATCH_WANTED=false; resetRoute(); } }
+function stopWatch(keep){ if(MEWATCH!==null){ navigator.geolocation.clearWatch(MEWATCH); MEWATCH=null; } if(!keep){ WATCH_WANTED=false; resetRoute(); vnStop(); } }
 // screen off / another app: no GPS at all; back on the map: pick up where it was
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden) stopWatch(true);
@@ -1840,7 +1859,7 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // ===== v32.6: truck-road route (pilot: Shula) =====
 // A route on roads Titan trucks have actually driven, worked out on the phone. data/trucknet.json is every road
 // piece trucks drove on 2+ days, from truck GPS (tools/route-miner/truck_net.py in titan-dispatch, rebuilt weekly;
-// never edit by hand). Busier roads cost less, service roads / tracks more. Map only for now: no voice yet.
+// never edit by hand). Busier roads cost less, service roads / tracks more. Voice directions: v32.7 below.
 // Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
 // and never used a road no Titan truck drives.
 const TNAV_CARDS = new Set(['eog-shula']);
@@ -1883,7 +1902,10 @@ function tTree(N, dest){
 function pathLen(p){ let m = 0; for(let i=1; i<p.length; i++) m += distM(p[i-1][0], p[i-1][1], p[i][0], p[i][1]); return m; }
 // the route from `me` (lat, lon) to dest: join the nearest truck road at the nearest point, then head for whichever
 // end of that road is cheaper to the pad. -> {line, join_m, legs:[[name, metres]], metres} or null
-function tRoute(N, T, me){
+// hd (degrees, optional): the way you're driving. Going back the other way costs UTURN_COST more, so a new route
+// carries on ahead unless turning around saves real distance - a loaded truck can't just flip around.
+const UTURN_COST = 5000;
+function tRoute(N, T, me, hd){
   let best = null;
   N.links.forEach((l, i)=>{
     const pts = tLine(N, i);
@@ -1892,18 +1914,22 @@ function tRoute(N, T, me){
   if(!best || best.d > 50000) return null;
   const l = N.links[best.i], toA = best.pts.slice(0, best.k+1).reverse(), toB = best.pts.slice(best.k);
   const frac = p => l[3] ? pathLen(p)/l[3] : 0;
-  const cA = T.dist[l[0]] + l[4]*frac(toA), cB = T.dist[l[1]] + l[4]*frac(toB);
+  let cA = T.dist[l[0]] + l[4]*frac(toA), cB = T.dist[l[1]] + l[4]*frac(toB);
+  if(hd != null && best.d < 100){
+    const away = p => p.length > 1 && Math.abs(turnDeg(hd, bearing(p[0], p[Math.min(3, p.length-1)]))) > 100;
+    if(away(toA)) cA += UTURN_COST; if(away(toB)) cB += UTURN_COST;
+  }
   if(!isFinite(cA) && !isFinite(cB)) return null;
   let line = cA <= cB ? toA : toB, u = cA <= cB ? l[0] : l[1];
-  const legs = [[N.names[l[2]], pathLen(line)]];
+  const legs = [[N.names[l[2]], pathLen(line), 0]];          // [name, metres, index in line where it starts]
   while(T.via[u] >= 0){
-    const i = T.via[u], m = N.links[i], p = tLine(N, i), fwd = m[0]===u;
+    const i = T.via[u], m = N.links[i], p = tLine(N, i), fwd = m[0]===u, at = line.length-1;
     line = line.concat((fwd ? p : p.reverse()).slice(1));
     const nm = N.names[m[2]];
-    if(legs.length && legs[legs.length-1][0]===nm) legs[legs.length-1][1] += m[3]; else legs.push([nm, m[3]]);
+    if(legs.length && legs[legs.length-1][0]===nm) legs[legs.length-1][1] += m[3]; else legs.push([nm, m[3], at]);
     u = fwd ? m[1] : m[0];
   }
-  return {line, join_m:best.d, legs:legs.filter(g=>g[1] >= 30), metres:pathLen(line)};
+  return {line, join_m:best.d, legs:legs.filter(g=>g[1] >= 30), raw:legs, metres:pathLen(line)};
 }
 const ROAD_ABBR = [[/\bNorthwest\b/g,'NW'],[/\bNortheast\b/g,'NE'],[/\bSouthwest\b/g,'SW'],[/\bSoutheast\b/g,'SE'],
   [/\bRoad\b/g,'Rd'],[/\bAvenue\b/g,'Ave'],[/\bStreet\b/g,'St'],[/\bDrive\b/g,'Dr'],[/\bHighway\b/g,'Hwy'],[/\bLane\b/g,'Ln']];
@@ -1933,8 +1959,33 @@ function roadList(legs){
   });
   return rows;
 }
+// for voice: the route as named pieces, merged less than the list does (a state route that turns a corner in town
+// is two pieces, so the turn gets said). A piece under 160 m is a connector: dropped, and the turn after it is said
+// where the connector began. at = where the turn begins in r.line, ix = where the new road itself starts.
+function vnPieces(raw){
+  const base = n => n.replace(/\s+(NW|NE|SW|SE|N|S|E|W)$/, '').replace(/\s+/g, '').toLowerCase();   // Stone Creek = Stonecreek
+  const out = [];
+  raw.filter((g, i)=>g[1] >= 30 || raw.slice(0, i).some(h=>h[1] >= 30)).forEach(([s, m, ix])=>{
+    const r = roadParts(s), k = r.name ? base(r.name) : r.refs.join('|'), last = out[out.length-1];
+    if(last && k === last.k) last.m += m; else out.push({k, name:r.name, refs:r.refs, m, ix});
+  });
+  const res = []; let pend = null;
+  out.forEach((g, i)=>{
+    if(g.m < 160 && i && i !== out.length-1){ if(pend == null) pend = g.ix; return; }
+    const last = res[res.length-1];
+    if(last && last.k === g.k){ last.m += g.m; pend = null; return; }
+    res.push(Object.assign(g, {at: i===0 ? 0 : (pend != null ? pend : g.ix)})); pend = null;
+  });
+  return res;
+}
 function tnavGeo(){ return TGEO || EMPTY_FC; }
-function clearTnav(){ TGEO = null; TNAV_ID = null; if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(EMPTY_FC); }
+function clearTnav(){ vnStop(); TGEO = null; TNAV_ID = null; if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(EMPTY_FC); }
+function tnavDraw(r, me){
+  const f = [{type:'Feature', geometry:{type:'LineString', coordinates:r.line.map(p=>[p[1], p[0]])}, properties:{}}];
+  if(r.join_m > 30) f.push({type:'Feature', geometry:{type:'LineString', coordinates:[[me[1], me[0]], [r.line[0][1], r.line[0][0]]]}, properties:{c:1}});
+  TGEO = {type:'FeatureCollection', features:f};
+  if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(TGEO);
+}
 // work out and draw the route from `me` to pad d; returns the route (or null) - the button calls it with the GPS fix
 function tnavShow(d, me, infoEl){
   return loadTnet().then(N=>{
@@ -1945,16 +1996,15 @@ function tnavShow(d, me, infoEl){
     if(!TTREE || TTREE.dest !== dest) TTREE = tTree(N, dest);
     const r = tRoute(N, TTREE, me);
     if(!r) return null;
-    const f = [{type:'Feature', geometry:{type:'LineString', coordinates:r.line.map(p=>[p[1], p[0]])}, properties:{}}];
-    if(r.join_m > 30) f.push({type:'Feature', geometry:{type:'LineString', coordinates:[[me[1], me[0]], [r.line[0][1], r.line[0][0]]]}, properties:{c:1}});
-    TGEO = {type:'FeatureCollection', features:f}; TNAV_ID = d._id;
-    if(MAP && MAP.getSource('tnav')) MAP.getSource('tnav').setData(TGEO);
+    vnStop(); tnavDraw(r, me); TNAV_ID = d._id;
     if(infoEl){
       const mi = m => (m/1609.34).toFixed(m < 16093 ? 1 : 0)+' mi';
       infoEl.innerHTML = '<div class="mvline tnav"><i></i><span><b>Green line: truck route, '+mi(r.metres)+'.</b> Only roads Titan trucks drive, from truck GPS. '
         + 'Pilot &mdash; the written haul route on the card rules.</span></div>'
         + (r.join_m > 150 ? '<div class="tnavnote">\u{1F4CD} You’re '+(r.join_m < 1609 ? Math.round(r.join_m/10)*10+' m' : mi(r.join_m))+' from the truck roads: get to the start of the green line first (dashed).</div>' : '')
-        + '<ol class="tnavroads">'+roadList(r.legs).map(g=>'<li><b>'+esc(g.label)+'</b> <span>'+mi(g.m)+'</span></li>').join('')+'</ol>';
+        + '<ol class="tnavroads">'+roadList(r.legs).map(g=>'<li><b>'+esc(g.label)+'</b> <span>'+mi(g.m)+'</span></li>').join('')+'</ol>'
+        + '<button type="button" class="btn nav tnavgo">\u{1F50A} Start voice directions</button>';
+      infoEl.querySelector('.tnavgo').addEventListener('click', ()=>vnStart(d, r));
     }
     if(MAP && window.maplibregl){
       const b = new maplibregl.LngLatBounds([me[1], me[0]], [me[1], me[0]]); r.line.forEach(p=>b.extend([p[1], p[0]]));
@@ -1977,6 +2027,210 @@ function truckRoute(d, btn, infoEl){
       .catch(()=>done('Couldn’t load the truck roads — check signal'));
   }, ()=>done());
 }
+// ===== v32.7: voice directions on the truck route (pilot: Shula) =====
+// "Start voice directions" under the green line. The phone reads the turns out loud (through the truck's Bluetooth
+// like any phone audio), keeps the screen on, follows you on the map, and works the route out again on the truck
+// roads if you leave it or turn back. For each turn: "in 1 mile" (45+ mph only), "in half a mile", and the turn
+// itself about 12 seconds out; after a turn with a long road ahead, "stay on X for N miles". It ends at the pad's
+// lease-road entrance: the blue line and the route card take over from there. Nothing leaves the phone.
+const VN_OFF_M = 60, VN_OFF_SEC = 6, VN_REROUTE_MS = 20000, VN_NOW_SEC = 12, VN_NOW_MIN_M = 120, VN_BACK_M = 200,
+      VN_MAX_ACC = 100, VN_FAR_M = 150, VN_NAG_MS = 90000, VN_UTURN_MS = 120000;
+let VNAV = null, WAKE = null, VNVOICE = lsGet('titan_vnav_voice', true), VNLAST = {t:'', at:0};
+const VNLOG = [];                                            // what it said (for checking a drive afterwards)
+function bearing(a, b){ const [kx, ky] = metersPerDeg(a[0]); return (Math.atan2((b[1]-a[1])*kx, (b[0]-a[0])*ky)*180/Math.PI + 360) % 360; }
+function turnDeg(from, to){ return ((to - from) + 540) % 360 - 180; }          // + = right, - = left
+const COMPASS = ['north','northeast','east','southeast','south','southwest','west','northwest'];
+const SAY_ABBR = [[/\bRd\b/g,'Road'],[/\bAve\b/g,'Avenue'],[/\bSt\b/g,'Street'],[/\bDr\b/g,'Drive'],[/\bHwy\b/g,'Highway'],[/\bLn\b/g,'Lane'],
+  [/\bNW\b/g,'Northwest'],[/\bNE\b/g,'Northeast'],[/\bSW\b/g,'Southwest'],[/\bSE\b/g,'Southeast']];
+// what to call a road: the state / US / interstate number if it has one (that's on the signs), else its name
+// (the one the route carries on along beats a Business loop: W High Ave is SR 39 to a driver, not US 250 Business)
+function roadRef(g, next){
+  const c = (g.refs||[]).filter(x=>/^(SR|US|I) /.test(x));
+  const main = x => !/\bBus(iness)?\b/.test(x), on = c.filter(x=>next && (next.refs||[]).includes(x));
+  return on.find(main) || on[0] || c.find(main) || c[0];
+}
+function sayRoad(g, next){
+  const ref = roadRef(g, next);
+  if(ref) return ref.replace(/^SR /, 'State Route ').replace(/^US /, 'U.S. ').replace(/^I /, 'Interstate ').replace(/\bBus\b/, 'Business');
+  if(g.name) return SAY_ABBR.reduce((t, [re, r])=>t.replace(re, r), g.name.replace(/\s+(NW|NE|SW|SE)$/, ''));
+  const r = (g.refs||[])[0];
+  return r ? r.replace(/^CR /, 'County Road ').replace(/^(TR|TH) /, 'Township Road ') : 'the unmarked road';
+}
+function showRoad(g, next){ return roadRef(g, next) || g.name || (g.refs||[])[0] || 'unmarked road'; }
+function distWords(m){
+  const mi = m/1609.34;
+  if(mi >= 0.85){ const h = Math.round(mi*2)/2, w = Math.floor(h); return h===1 ? '1 mile' : h%1 ? w+' and a half miles' : h+' miles'; }
+  if(mi >= 0.4) return 'half a mile';
+  if(mi >= 0.2) return 'a quarter mile';
+  return Math.max(100, Math.round(m*3.281/100)*100)+' feet';
+}
+function distShort(m){ return m >= 161 ? (m/1609.34).toFixed(m < 16093 ? 1 : 0)+' mi' : Math.max(50, Math.round(m*3.281/50)*50)+' ft'; }
+const lc1 = t => t.charAt(0).toLowerCase() + t.slice(1);
+function vnCum(line){ const c = [0]; for(let i=1; i<line.length; i++) c.push(c[i-1] + distM(line[i-1][0], line[i-1][1], line[i][0], line[i][1])); return c; }
+function vnAt(V, s){                                          // the point s metres along the route
+  const c = V.cum, L = V.line; s = Math.max(0, Math.min(c[c.length-1], s));
+  let lo = 0, hi = c.length-1; while(hi - lo > 1){ const m = (lo+hi)>>1; if(c[m] <= s) lo = m; else hi = m; }
+  const t = c[hi] > c[lo] ? (s - c[lo])/(c[hi]-c[lo]) : 0;
+  return [L[lo][0] + t*(L[hi][0]-L[lo][0]), L[lo][1] + t*(L[hi][1]-L[lo][1])];
+}
+// the turns: where the road (as the list names it) changes; which way from the road's bearing either side
+function vnBuild(d, r){
+  const line = r.line, cum = vnCum(line), P = vnPieces(r.raw || r.legs), at = i => cum[Math.min(i || 0, cum.length-1)];
+  const named = g => g && (g.name || g.refs.length), ahead = k => P.slice(k+1).find(named), say2 = g => sayRoad(g, P[P.indexOf(g)+1]);
+  const V = {d, r, line, cum, total:cum[cum.length-1], steps:[],
+    firstRoad: named(P[0]) ? sayRoad(P[0], P[1]) : null, firstToward: ahead(0) ? say2(ahead(0)) : null,
+    seg:0, s:0, maxS:0, next:0, offSince:0, rerouted:0, sp:0, hd:null, last:null, said:{}, stayFrom:0, stayDone:false, follow:0};
+  for(let k=1; k<P.length; k++){
+    const g = P[k], s0 = at(g.at), s1 = at(g.ix);
+    // the way in to where the turn begins vs the way out once on the new road (across any connector)
+    const t = turnDeg(bearing(vnAt(V, s0 - 40), vnAt(V, s0)), bearing(vnAt(V, s1), vnAt(V, s1 + 50))), A = Math.abs(t), side = t > 0 ? 'right' : 'left';
+    const shared = g.refs.find(x=>/^(SR|US|I) /.test(x) && P[k-1].refs.includes(x));
+    if(shared && A < 30) continue;                            // the same state route straight on under a new street name
+    if(!named(g) && A < 20) continue;                         // an unnamed stretch straight ahead: nothing to say
+    const verb = A < 20 ? 'Continue' : A < 45 ? 'Keep '+side : A < 150 ? 'Turn '+side : 'Make a sharp '+side;
+    let road, text, short;
+    if(shared){ road = sayRoad({refs:[shared]}); text = verb+' to stay on '+road+'.'; short = shared; }
+    else if(named(g)){ road = sayRoad(g, P[k+1]); text = (A < 20 ? 'Continue onto ' : verb+' onto ')+road+'.'; short = showRoad(g, P[k+1]); }
+    else { const t2 = ahead(k); road = 'this road'; text = verb+(t2 ? ' toward '+say2(t2) : '')+'.'; short = t2 ? 'toward '+showRoad(t2, P[P.indexOf(t2)+1]) : 'ramp'; }
+    V.steps.push({s:s0, road, short, text,
+      arrow: A < 20 ? '↑' : A < 45 ? (t > 0 ? '↗' : '↖') : (t > 0 ? '↱' : '↰')});
+  }
+  const e = line[line.length-1], p = padPoint(d), pb = vnAt(V, V.total - 60);   // the lease road: the side the pad is on
+  let side = '';
+  if(p && distM(e[0], e[1], p[1], p[0]) > 40){ const t = turnDeg(bearing(pb, e), bearing(e, [p[1], p[0]])); side = Math.abs(t) < 30 ? 'straight ahead' : t > 0 ? 'on the right' : 'on the left'; }
+  V.end = {pad:d.pad, side};
+  return V;
+}
+function vnEndText(V){ return 'The '+V.end.pad+' lease road is '+(V.end.side || 'ahead')+'.'; }
+function vnLead(V){
+  const b0 = bearing(vnAt(V, 0), vnAt(V, 80)), on = V.firstRoad ? ' on '+V.firstRoad : V.firstToward ? ' toward '+V.firstToward : '';
+  if(V.r.join_m > VN_OFF_M) return 'First get to '+(V.firstRoad || V.firstToward || 'the green line')+', '+distWords(V.r.join_m)+' away, on the dashed line.';
+  if(V.hd != null && Math.abs(turnDeg(V.hd, b0)) > 120) return 'Turn around when it’s safe, then head'+on+'.';
+  return 'Head '+COMPASS[Math.round(b0/45) % 8]+on+'.';
+}
+function vnSay(t, urgent){
+  const now = Date.now();
+  if(t === VNLAST.t && now - VNLAST.at < 60000) return;      // never the same line twice in a row
+  VNLAST = {t, at:now}; VNLOG.push({t, s:VNAV ? Math.round(VNAV.s) : 0, at:now});
+  if(!VNVOICE || !window.speechSynthesis) return;
+  try{ if(urgent) speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t); u.lang = 'en-US'; u.rate = 1; speechSynthesis.speak(u); }catch(e){}
+}
+function wakeOn(){ try{ if(navigator.wakeLock && !document.hidden && !WAKE) navigator.wakeLock.request('screen').then(w=>{ WAKE = w; w.addEventListener('release', ()=>{ WAKE = null; }); }).catch(()=>{}); }catch(e){} }
+function wakeOff(){ try{ if(WAKE) WAKE.release(); }catch(e){} WAKE = null; }
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden && VNAV) wakeOn(); });
+function vnStart(d, r){
+  wakeAudio();
+  if(TNET && TTREE && MY){ const fresh = tRoute(TNET, TTREE, [MY.lat, MY.lon]); if(fresh){ r = fresh; tnavDraw(r, [MY.lat, MY.lon]); } }   // from where you are now
+  VNAV = vnBuild(d, r);
+  mapSheet.hidden = true; mapEl.classList.add('vnav'); document.getElementById('vnavBar').hidden = false;
+  wakeOn(); watchMe();
+  if(MAP && !MAP._vnDrag){ MAP._vnDrag = true; MAP.on('dragstart', ()=>{ if(VNAV) VNAV.follow = Date.now() + 20000; }); }   // you moved the map: leave it 20 s
+  VNLAST = {t:'', at:0};
+  vnSay('Truck route to '+d.pad+', '+distWords(VNAV.total)+'. '+vnLead(VNAV), true);   // inside the tap: phones allow speech from here on
+  vnPaint(); vnFollow(true);
+}
+function vnStop(){
+  if(!VNAV) return;
+  VNAV = null; mapEl.classList.remove('vnav'); document.getElementById('vnavBar').hidden = true; wakeOff();
+  try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(e){}
+}
+function vnProject(V, lat, lon){                              // where you are along the route, and how far off it
+  const [kx, ky] = metersPerDeg(lat), L = V.line, n = L.length;
+  const scan = (a, b)=>{ let best = {off:Infinity, seg:V.seg, s:V.s};
+    for(let i=Math.max(0, a); i < Math.min(n-1, b); i++){
+      const ax=(L[i][1]-lon)*kx, ay=(L[i][0]-lat)*ky, bx=(L[i+1][1]-lon)*kx, by=(L[i+1][0]-lat)*ky;
+      const dx=bx-ax, dy=by-ay, q=dx*dx+dy*dy, t = q ? Math.max(0, Math.min(1, -(ax*dx+ay*dy)/q)) : 0, dd = Math.hypot(ax+t*dx, ay+t*dy);
+      if(dd < best.off) best = {off:dd, seg:i, s:V.cum[i] + t*(V.cum[i+1]-V.cum[i])};
+    } return best; };
+  let b = scan(V.seg - 20, V.seg + 400);                      // near where you were, so a road that passes close later doesn't count
+  if(b.off > VN_OFF_M){ const g = scan(0, n-1); if(g.off < b.off) b = g; }
+  return b;
+}
+function vnFollow(force){
+  const V = VNAV; if(!V || !MAP || !MY) return;
+  if(!force && Date.now() < V.follow) return;
+  MAP.easeTo({center:[MY.lon, MY.lat], zoom:force ? 15 : Math.max(13.5, Math.min(MAP.getZoom(), 16.5)),
+              padding:{top:document.getElementById('vnavBar').offsetHeight + 80, bottom:30, left:0, right:0}, duration:900});
+}
+// every GPS fix while it runs (from watchMe)
+function vnTick(c){
+  const V = VNAV; if(!V || V.done || !MY || mapEl.hidden) return;
+  if(c && c.accuracy > VN_MAX_ACC) return;                    // too rough to judge
+  const now = Date.now(), me = [MY.lat, MY.lon];
+  let sp = c && c.speed != null && c.speed >= 0 ? c.speed : null, hd = c && c.heading != null && !isNaN(c.heading) && (c.speed||0) > 2 ? c.heading : null;
+  if(V.last){ const dm = distM(V.last.p[0], V.last.p[1], me[0], me[1]), dt = (now - V.last.t)/1000;
+    if(sp == null && dt > 0.5) sp = dm/dt;
+    if(hd == null && dm > 15) hd = bearing(V.last.p, me);
+    if(dm > 15 || dt > 10) V.last = {p:me, t:now};
+  } else V.last = {p:me, t:now};
+  if(sp != null) V.sp = V.sp ? 0.6*V.sp + 0.4*sp : sp;
+  if(hd != null) V.hd = hd;
+  vnFollow();
+  const pr = vnProject(V, me[0], me[1]), tol = VN_OFF_M + Math.min((c && c.accuracy) || 0, 40);
+  if(pr.off > tol || pr.s < V.maxS - VN_BACK_M){              // off the route, or heading back the way you came
+    if(!V.offSince) V.offSince = now;
+    if(now - V.offSince >= VN_OFF_SEC*1000 && now - V.rerouted >= VN_REROUTE_MS) vnReroute();
+    return;
+  }
+  V.offSince = 0; V.seg = pr.seg; V.s = pr.s; V.maxS = Math.max(V.maxS, pr.s);
+  V.offMode = false;
+  if(V.spokeOff){ V.spokeOff = false; vnSay('Back on the truck roads.', true); }
+  while(V.next < V.steps.length && V.steps[V.next].s <= pr.s + 10){ V.stayFrom = V.steps[V.next].s; V.stayDone = false; V.next++; }
+  const st = V.steps[V.next], D = (st ? st.s : V.total) - pr.s, nowM = Math.max(VN_NOW_MIN_M, V.sp*VN_NOW_SEC);
+  if(!st && D <= 40){ vnArrive(V); return; }
+  const said = V.said[V.next] || (V.said[V.next] = {}), text = st ? st.text : vnEndText(V);
+  if(D <= nowM){ if(!said.now){ said.now = said.half = said.mile = true; vnSay(text, true); } }
+  else if(D <= 900){ if(!said.half && D > nowM + 150){ said.half = said.mile = true; vnSay('In '+distWords(D)+', '+lc1(text)); } }
+  else if(D <= 1800){ if(!said.mile && V.sp > 18 && D > 1450){ said.mile = true; vnSay('In '+distWords(D)+', '+lc1(text)); } }
+  else if(!V.stayDone && pr.s > V.stayFrom + 150){ V.stayDone = true; vnSay('Stay on '+((V.next ? V.steps[V.next-1].road : V.firstRoad) || 'this road')+' for '+distWords(D)+'.'); }
+  vnPaint();
+}
+function vnArrive(V){
+  V.done = true; V.s = V.total;
+  if(!(V.said[V.next] || {}).now) vnSay(vnEndText(V), true);
+  vnPaint();
+  setTimeout(()=>{ if(VNAV === V) vnStop(); }, 20000);        // the banner stays 20 s, then the map is yours
+}
+// left the truck route: work it out again from here, on the truck roads, carrying on the way you're going if it can.
+// It talks only when it matters: off the truck roads by more than VN_FAR_M (then every 90 s at most), back on them,
+// "turn around" (every 2 min at most), or "new truck route" (the next turn is then said as usual).
+function vnReroute(){
+  const V = VNAV; if(!V || !TNET || !TTREE || !MY) return;
+  const me = [MY.lat, MY.lon], now = Date.now(), r = tRoute(TNET, TTREE, me, V.hd);
+  V.rerouted = now; V.offSince = 0;
+  if(!r){ V.offMode = true; if(!V.spokeOff){ V.spokeOff = true; vnSay('No truck route from here. Use the route card.', true); } vnPaint(); return; }
+  tnavDraw(r, me);
+  const N = vnBuild(V.d, r);
+  Object.assign(N, {sp:V.sp, hd:V.hd, last:V.last, follow:V.follow, rerouted:now, nagAt:V.nagAt || 0, uturnAt:V.uturnAt || 0, spokeOff:V.spokeOff});
+  VNAV = N;
+  if(r.join_m > VN_FAR_M){
+    N.offMode = true;
+    if(!V.spokeOff || now - N.nagAt > VN_NAG_MS){ N.nagAt = now; N.spokeOff = true;
+      vnSay('Off the truck roads. Get back to '+(N.firstRoad || N.firstToward || 'the green line')+', '+distWords(r.join_m)+' away.', true); }
+  } else if(V.spokeOff){ N.spokeOff = false; vnSay('Back on the truck roads.', true); }
+  else if(r.join_m <= VN_OFF_M){
+    const back = N.hd != null && Math.abs(turnDeg(N.hd, bearing(vnAt(N, 0), vnAt(N, 80)))) > 120;
+    if(!back) vnSay('New truck route.', true);
+    else if(now - N.uturnAt > VN_UTURN_MS){ N.uturnAt = now; vnSay('Turn around when it’s safe.', true); }
+  }
+  vnPaint();
+}
+function vnPaint(){
+  const V = VNAV; if(!V) return;
+  const st = V.steps[V.next], D = Math.max(0, (st ? st.s : V.total) - V.s), $ = id => document.getElementById(id);
+  $('vnArrow').textContent = V.offMode ? '⚠' : V.done || !st ? '\u{1F3C1}' : st.arrow;
+  $('vnDist').textContent = V.offMode ? 'Off the truck roads' : V.done ? 'Lease road' : distShort(D);
+  $('vnRoad').textContent = V.offMode ? 'Get back to the green line' : st ? st.short : V.end.pad+' lease road'+(V.end.side ? ' — '+V.end.side : '');
+  $('vnLeft').textContent = V.done ? 'Follow the route card from here' : distShort(Math.max(0, V.total - V.s))+' to '+V.end.pad;
+  $('vnMute').textContent = VNVOICE ? '\u{1F50A} Voice' : '\u{1F507} Muted';
+  $('vnMute').setAttribute('aria-pressed', String(VNVOICE));
+}
+document.getElementById('vnStopBtn').addEventListener('click', vnStop);
+document.getElementById('vnMute').addEventListener('click', ()=>{
+  VNVOICE = !VNVOICE; lsSet('titan_vnav_voice', VNVOICE);
+  if(!VNVOICE){ try{ speechSynthesis.cancel(); }catch(e){} } else vnSay('Voice on.', true);
+  vnPaint();
+});
 // ===== v30.8: save this area for offline =====
 // Saves what a driver needs to find a lease road with no signal, for the area on screen: the street map (OpenFreeMap
 // vector tiles to zoom 14 - the map draws closer zooms from them - plus its style, fonts and sprites) and the

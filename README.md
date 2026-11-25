@@ -44,11 +44,34 @@ gzipped) is every road piece trucks drove on 2+ truck-days since 9/27, joined in
 `tools/route-miner/truck_net.py` in titan-dispatch from the map-matched truck GPS - never edit it by hand. On the map,
 a pad in `TNAV_CARDS` (index.html; only `eog-shula` for now) gets **Truck route from here**: the phone works out the
 cheapest route to the pad's mined entrance on that network (busier roads cost less, service roads / tracks 3x more),
-draws it green (dashed from you to the nearest truck road when you're off it) and lists the roads with miles. Map only:
-no voice or turn prompts yet. Rick's Shula test (155 real trips since 10/25, routes built only from earlier GPS):
+draws it green (dashed from you to the nearest truck road when you're off it) and lists the roads with miles (voice
+directions: v32.7 below). Rick's Shula test (155 real trips since 10/25, routes built only from earlier GPS):
 the route matched the driver's own roads 89% vs Google 40-50%, and never used a road no Titan truck drives.
 `python truck_net.py --check eog-shula` re-checks a card against the last month's trips. Not precached yet: the
 file is saved by the service worker the first time someone asks for a truck route.
+
+## Voice directions on the truck route (v32.7)
+
+**Start voice directions** under the green line reads the turns out loud with the phone's own voice
+(`speechSynthesis`, so it plays through the truck's Bluetooth like any phone audio; nothing leaves the phone). It keeps
+the screen on (Wake Lock), follows the truck on the map (moving the map leaves it alone for 20 s) and shows the next
+turn in a green banner with Voice on/off and Stop.
+- Turns are where the road changes name, worked out from `trucknet.json`'s road names. A state / US route that turns a
+  corner in town is said ("turn left to stay on State Route 39"); the same route straight on under a new street name
+  is not. Roads are called by their SR / US / I number when they have one (the one the route carries on along, not a
+  Business loop), else their name without the NW/SE tail. Pieces under 160 m are connectors: the turn is said where
+  the connector begins. Unnamed ramps: "keep right toward State Route 259".
+- For each turn: "in 1 mile" (45+ mph only), "in half a mile", and the turn itself about 12 s out (120 m at least);
+  after a turn with 1+ mile to the next, "stay on X for N miles". It ends at the pad's entrance: "the Shula lease road
+  is on the right" (the side the pad is on), then the blue line and route card take over.
+- Leaving the route (60 m+ for 6 s, or 200 m back the way you came) works it out again from where you are, at most
+  every 20 s. A U-turn costs 5 km extra in that new route (`UTURN_COST`, tRoute), so it carries on ahead unless turning
+  back saves real distance. It talks only when it matters: "off the truck roads" (150 m+ from them; every 90 s at
+  most), "back on the truck roads", "turn around when it's safe" (every 2 min at most), "new truck route".
+- Checked on four real Shula trips replayed as GPS (11/25): from the yard it gave 15 lines in 16 miles, every turn
+  matching the card (SR 39 → left on Beaver Ave staying on SR 39 → left on Cutler Rd → lease road on the right); on
+  trips where the driver went his own way it settled down within about a mile.
+- The page calls `vnTick` on every GPS fix (`watchMe`); the GPS only runs with the map open and on screen.
 
 ## Shared road rules and alert end dates (v31.9)
 Rules that apply to a group of pads live once in `data/rules.json` as named rule sets, not copied onto each card:
