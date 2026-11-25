@@ -34,7 +34,7 @@ import os
 import re
 import sys
 
-FILES = ['ascent', 'eog', 'gulfport', 'infinity', 'expand', 'tiburon', 'frac', 'disposal']
+FILES = ['ascent', 'eog', 'gulfport', 'infinity', 'expand', 'tiburon', 'frac', 'disposal', 'offload']
 RULES = os.path.join('data', 'rules.json')     # shared rule sets (v31.9) - not a customer file, so not in FILES
 
 
@@ -233,7 +233,7 @@ def consistency(cards, sets, day=None):
             if a.get('until') and not re.fullmatch(r'\d{4}-\d{2}-\d{2}', a['until']):
                 errs.append(f'{i}: "until" must be YYYY-MM-DD: {a["until"]}')
     # a pad shows one way at a time: while its frac card is up, the regular card is hidden (with "goto")
-    regular = {(d['src'], d.get('pad', '').strip().lower()): d for d in cards if d.get('src') not in ('Frac', 'Disposal')}
+    regular = {(d['src'], d.get('pad', '').strip().lower()): d for d in cards if d.get('src') not in ('Frac', 'Disposal', 'Offload')}
     for f in cards:
         if f.get('src') != 'Frac' or not visible(f, day):
             continue

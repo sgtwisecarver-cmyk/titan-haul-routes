@@ -69,7 +69,7 @@ def load_data():
 
 
 def operator(d):
-    if d['src'] in ('Frac', 'Disposal'):
+    if d['src'] in ('Frac', 'Disposal', 'Offload'):
         return d.get('operator') or ''
     return d['src']
 
@@ -98,6 +98,8 @@ def kind(d):
         return 'frac'
     if d['src'] == 'Disposal':
         return 'disposal'
+    if d['src'] == 'Offload':
+        return 'offload'
     return 'pad'
 
 
@@ -107,6 +109,8 @@ def title_of(d):
         return f"{d['pad']} — traffic control plan, staging & directions"
     if kind(d) == 'disposal':
         return f"{d['pad']} — disposal site directions"
+    if kind(d) == 'offload':
+        return f"{d['pad']} — oil offload directions"
     return f"{d['pad']} ({op}) — haul route & directions"
 
 
@@ -118,6 +122,8 @@ def description_of(d):
         s = f"Traffic control plan, staging and truck directions for the {d['pad']}{where}. For water haulers working the frac."
     elif kind(d) == 'disposal':
         s = f"Directions and route to the {d['pad']} saltwater disposal site{where}, for produced-water haulers."
+    elif kind(d) == 'offload':
+        s = f"Directions to the {d['pad']} oil offload terminal{where}, for Titan oil haulers."
     else:
         # "3M 19-11-3 PAD" / "Reed Haul Route" -> "the 3M 19-11-3 pad" / "the Reed pad"
         name = re.sub(r'\s*\b(haul route|route|pad)\s*$', '', d['pad'], flags=re.I).strip() or d['pad']
@@ -237,7 +243,7 @@ def pad_page(d, located):
     b = ['<div class="crumbs"><a href="../index.html">Haul routes</a> › <a href="index.html">All pads</a>'
          + (f" › {e(d['county'])}" if d.get('county') else '') + '</div>',
          f"<h1>{e(d['pad'])}</h1>"]
-    meta = [x for x in [opname if kind(d) != 'disposal' else (('Disposal' + (' · ' + opname if opname else ''))), where] if x]
+    meta = [x for x in [opname if kind(d) not in ('disposal', 'offload') else ((('Disposal' if kind(d) == 'disposal' else 'Oil offload') + (' · ' + opname if opname else ''))), where] if x]
     b.append('<div class="meta">' + e(' · '.join(meta)) + '</div>')
     for a in pads.card_alerts(d, RULESETS, TODAY):  # shared rule sets first, then the card's own alerts; past "until" dropped
         if a.get('t'):
@@ -324,9 +330,9 @@ def az_page(cards):
         county.setdefault(d.get('county') or 'County not listed', []).append(d)
         cust.setdefault(d['src'], []).append(d)
     county_order = sorted(county, key=lambda c: (c == 'County not listed', c))
-    src_order = ['Ascent', 'EOG', 'Gulfport', 'Infinity', 'Expand', 'Tiburon', 'Frac', 'Disposal']
+    src_order = ['Ascent', 'EOG', 'Gulfport', 'Infinity', 'Expand', 'Tiburon', 'Frac', 'Disposal', 'Offload']
     cust_order = sorted(cust, key=lambda c: (src_order.index(c) if c in src_order else 99, c))
-    cust_label = lambda c: {'Frac': 'Active fracs', 'Disposal': 'Disposal sites'}.get(c, OPERATOR_NAMES.get(c, c))
+    cust_label = lambda c: {'Frac': 'Active fracs', 'Disposal': 'Disposal sites', 'Offload': 'Oil offloads'}.get(c, OPERATOR_NAMES.get(c, c))
     b = ['<h1>All pads A–Z</h1>',
          f'<div class="meta">{len(cards):,} pads, disposal sites and active fracs across eastern Ohio and nearby West Virginia and Pennsylvania — '
          'EOG, Ascent, Gulfport, Infinity, Expand and Tiburon. Pick one for its haul route and directions.</div>',

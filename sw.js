@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v84';
+const VER = 'titan-v85';
 // route maps and the safety video live on their own site (v31.0) so this one publishes fast
 const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
@@ -10,7 +10,7 @@ const SHELL = [
   // the pad cards (v30.6) - keep in step with tools/pads.py FILES
   './data/pads/index.json', './data/pads/ascent.json', './data/pads/eog.json', './data/pads/gulfport.json',
   './data/pads/infinity.json', './data/pads/expand.json', './data/pads/tiburon.json', './data/pads/frac.json',
-  './data/pads/disposal.json',
+  './data/pads/disposal.json', './data/pads/offload.json',
   // shared road rule sets (v31.9) - tools/pads.py RULES; refreshed like the pad files
   './data/rules.json',
   './icon-192.png', './icon-512.png', './icon-180.png', './img/titan-logo.png', './img/favicon.png',

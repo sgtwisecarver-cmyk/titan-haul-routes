@@ -25,7 +25,7 @@
 // v30.6: the pad cards come from data/pads/ (one file per customer + index.json with the list order), loaded
 // while the page paints; the service worker answers from its saved copy. tools/pads.py writes these files.
 window.TITAN_PADS=(function(){
-  var KNOWN=['ascent','eog','gulfport','infinity','expand','tiburon','frac','disposal'], got={};
+  var KNOWN=['ascent','eog','gulfport','infinity','expand','tiburon','frac','disposal','offload'], got={};
   function get(f){ return got[f] || (got[f]=fetch('data/pads/'+f+'.json').then(function(r){ if(!r.ok) throw new Error(f+' '+r.status); return r.json(); })); }
   KNOWN.forEach(function(f){ get(f).catch(function(){}); });          // all at once, not one after another
   // v31.9: shared road rule sets (data/rules.json, see tools/pads.py) - safety rules, so the cards wait for them
@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v32.8 — Nov 2026";
+const VERSION = "v32.9 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -599,9 +599,10 @@ const LOGOS = {
  Expand: '<svg width="74" height="20" viewBox="0 0 74 20"><text x="1" y="16" font-family="Arial,sans-serif" font-size="16" font-weight="800" fill="#5aa9dc">e</text><text x="11" y="16" font-family="Arial,sans-serif" font-size="16" font-weight="800" fill="#1d3461">xpand</text></svg>',
  Tiburon:'<svg width="80" height="20" viewBox="0 0 80 20"><text x="1" y="16.5" textLength="9.5" lengthAdjust="spacingAndGlyphs" font-family="Arial,sans-serif" font-size="15" font-weight="800" fill="#1f4e8c">T</text><rect x="11.6" y="1.2" width="3" height="2.8" fill="#1fb0e3"/><rect x="11.6" y="5.6" width="3" height="10.9" fill="#1f4e8c"/><text x="16.5" y="16.5" textLength="32" lengthAdjust="spacingAndGlyphs" font-family="Arial,sans-serif" font-size="15" font-weight="800" fill="#1f4e8c">BUR</text><circle cx="57" cy="10.6" r="6.8" fill="#1fb0e3"/><path d="M54.3 17 C54.2 12.5 55.6 8.3 58.6 5.4 C58.4 8 59 10.2 60.9 11.6 L59.2 12 L60.6 13.2 C59.2 14 58.1 15.4 57.7 17.3 Z" fill="#fff"/><text x="65" y="16.5" textLength="11" lengthAdjust="spacingAndGlyphs" font-family="Arial,sans-serif" font-size="15" font-weight="800" fill="#1f4e8c">N</text></svg>',
  Frac: '<svg width="70" height="20" viewBox="0 0 70 20"><path d="M8 2 L3 18 M8 2 L13 18 M4.6 13 L11.4 13 M5.9 8.5 L10.1 8.5 M3 18 L13 18" fill="none" stroke="#c2410c" stroke-width="1.8" stroke-linecap="round"/><circle cx="8" cy="2.2" r="1.4" fill="#c2410c"/><text x="18" y="15" font-family="Arial,sans-serif" font-size="11.5" font-weight="800" letter-spacing=".8" fill="#c2410c">FRACS</text></svg>',
- Disposal: '<svg width="92" height="20" viewBox="0 0 92 20"><path d="M7 2 C4.5 5.5 2.5 8.5 2.5 11 a4.5 4.5 0 0 0 9 0 C11.5 8.5 9.5 5.5 7 2 Z" fill="#31708f"/><path d="M16.5 3.5 L16.5 12.5 M13 9.5 L16.5 13.5 L20 9.5" fill="none" stroke="#31708f" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><text x="25" y="15" font-family="Arial,sans-serif" font-size="11.5" font-weight="800" letter-spacing=".8" fill="#31708f">DISPOSAL</text></svg>'
+ Disposal: '<svg width="92" height="20" viewBox="0 0 92 20"><path d="M7 2 C4.5 5.5 2.5 8.5 2.5 11 a4.5 4.5 0 0 0 9 0 C11.5 8.5 9.5 5.5 7 2 Z" fill="#31708f"/><path d="M16.5 3.5 L16.5 12.5 M13 9.5 L16.5 13.5 L20 9.5" fill="none" stroke="#31708f" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"/><text x="25" y="15" font-family="Arial,sans-serif" font-size="11.5" font-weight="800" letter-spacing=".8" fill="#31708f">DISPOSAL</text></svg>',
+ Offload: '<svg width="116" height="20" viewBox="0 0 116 20"><rect x="2" y="3" width="11" height="14" rx="2" fill="none" stroke="#7a4a12" stroke-width="2"/><path d="M2.5 8 L12.5 8 M2.5 12 L12.5 12" stroke="#7a4a12" stroke-width="1.6"/><path d="M19 3 C17 6 15.8 8 15.8 9.8 a3.2 3.2 0 0 0 6.4 0 C22.2 8 21 6 19 3 Z" fill="#7a4a12"/><text x="26" y="15" font-family="Arial,sans-serif" font-size="11.5" font-weight="800" letter-spacing=".6" fill="#7a4a12">OIL OFFLOAD</text></svg>'
 };
-const SRC_ORDER = ["Ascent","EOG","Gulfport","Infinity","Expand","Tiburon","Frac","Disposal"];
+const SRC_ORDER = ["Ascent","EOG","Gulfport","Infinity","Expand","Tiburon","Frac","Disposal","Offload"];
 const SRC_LABEL = {};
 const logoFor = (s, tag) => (LOGOS[s]||'').replace(/ascg/g, 'ascg'+tag);   // tag = a unique suffix per place the logo is used
 let CUSTOMERS = [];   // the customers that have cards (bootData); one can be remembered per phone
@@ -750,7 +751,7 @@ function render(){
   }
   if(srcFilter!=="ALL"){                           // say plainly that the list is narrowed, with the way out
     const f=document.createElement('div'); f.className='filterline';
-    const what = srcFilter==="ALERTS" ? 'pads with a road alert' : srcFilter==="Frac" ? 'active fracs' : srcFilter==="Disposal" ? 'disposal sites' : esc(srcFilter)+' pads';
+    const what = srcFilter==="ALERTS" ? 'pads with a road alert' : srcFilter==="Frac" ? 'active fracs' : srcFilter==="Disposal" ? 'disposal sites' : srcFilter==="Offload" ? 'oil offloads' : esc(srcFilter)+' pads';
     f.innerHTML='<span>Showing <b>'+(toks.length?'':hits.length+' ')+what+'</b> only</span><button type="button">Show all</button>';
     f.querySelector('button').addEventListener('click', ()=>setFilter("ALL"));
     frag.appendChild(f);
@@ -813,7 +814,7 @@ function addCards(frag, hits, from, to){
     const d=hits[i];
     if(GROUPED && (i===0 || hits[i-1].src!==d.src)){
       const h=document.createElement('div'); h.className='sechead grp';
-      const n=GROUPN[d.src]||0, kind = d.src==="Frac" ? 'active frac' : d.src==="Disposal" ? 'disposal site' : 'pad';
+      const n=GROUPN[d.src]||0, kind = d.src==="Frac" ? 'active frac' : d.src==="Disposal" ? 'disposal site' : d.src==="Offload" ? 'oil offload' : 'pad';
       h.innerHTML=(LOGOS[d.src]?'<span class="logochip">'+LOGOS[d.src]+'</span>':esc(d.src))+'<span>'+n+' '+kind+(n===1?'':'s')+'</span>';
       frag.appendChild(h);
     }
@@ -1448,8 +1449,8 @@ function trackPad(d){
   const cs=document.getElementById('custSheet'), tiles=document.getElementById('custTiles');
   const n = s => DATA.filter(d=>d.src===s).length;
   paintCustTiles = () => { tiles.innerHTML = '<button type="button" class="all" data-src="ALL"><b>All customers</b><small>'+DATA.length.toLocaleString()+' routes</small></button>' +
-    CUSTOMERS.concat(["Disposal","Frac"]).filter(s=>n(s)).map(s=>
-      '<button type="button" data-src="'+escAttr(s)+'" aria-label="'+escAttr(s)+'"><span class="lg">'+(logoFor(s,'T')||esc(s))+'</span><small>'+n(s)+(s==="Frac"?' active':s==="Disposal"?' sites':' pads')+'</small></button>').join('');
+    CUSTOMERS.concat(["Disposal","Offload","Frac"]).filter(s=>n(s)).map(s=>
+      '<button type="button" data-src="'+escAttr(s)+'" aria-label="'+escAttr(s)+'"><span class="lg">'+(logoFor(s,'T')||esc(s))+'</span><small>'+n(s)+(s==="Frac"?' active':(s==="Disposal"||s==="Offload")?' sites':' pads')+'</small></button>').join('');
     const fc=document.querySelector('.chip.fracchip'); if(fc){ fc.innerHTML='\u{1F6A7} Fracs'; fc.setAttribute('aria-label', n("Frac")+' active fracs'); }
   };
   const sheetCtl = makeSheet(cs, document.getElementById('custBtn'), document.getElementById('custClose'));
@@ -1470,7 +1471,7 @@ function trackPad(d){
 // The map library loads only the first time the map opens, so the list stays as fast as it was.
 const MAPLIB = 'vendor/maplibre-gl-4.7.1';   // self-hosted copy of the npm 4.7.1 dist files (no CDN)
 const PIN_COLOR = {Ascent:'#3d8bff', EOG:'#22b573', Gulfport:'#a35ee0', Infinity:'#ff7a29', Expand:'#18b7d6',
-                   Tiburon:'#e8b100', Frac:'#ff3d00', Disposal:'#6f8aa6'};
+                   Tiburon:'#e8b100', Frac:'#ff3d00', Disposal:'#6f8aa6', Offload:'#7a4a12'};
 const BRIDGE = [   // by severity v: 0..3
   {c:'#f2c200', t:'Rated about 66,000–79,000 lb', s:'Under a legal 80,000 lb load'},
   {c:'#ff8a00', t:'Rated about 40,000–65,000 lb', s:'Well under a legal load'},
@@ -1585,7 +1586,7 @@ function refreshPads(){
   MAP.getSource('pads').setData(g);
   const one = g.features.length===1;
   const what = srcFilter==="ALERTS" ? (one?'pad':'pads')+' with a road alert' : srcFilter==="Frac" ? 'active frac'+(one?'':'s')
-             : srcFilter==="Disposal" ? 'disposal site'+(one?'':'s') : (srcFilter!=="ALL" ? srcFilter+' ' : '')+(one?'pad':'pads');
+             : srcFilter==="Disposal" ? 'disposal site'+(one?'':'s') : srcFilter==="Offload" ? 'oil offload'+(one?'':'s') : (srcFilter!=="ALL" ? srcFilter+' ' : '')+(one?'pad':'pads');
   document.getElementById('mapCount').textContent = g.features.length.toLocaleString()+' '+what+(qEl.value.trim() ? ' matching “'+qEl.value.trim()+'”' : '');
   return g;
 }
@@ -1676,7 +1677,7 @@ function paintMapUI(){
   document.getElementById('mapLblTog').setAttribute('aria-pressed', String(MAPLBL));
   document.getElementById('mapSndTog').setAttribute('aria-pressed', String(OFFSOUND));
   document.getElementById('mapKey').innerHTML =
-      CUSTOMERS.concat(['Frac','Disposal']).filter(s=>DATA.some(d=>d.src===s)).map(s=>'<i style="background:'+escAttr(PIN_COLOR[s]||'#888')+'"></i><span>'+esc(s==='Frac'?'Active frac':s)+'</span>').join('')
+      CUSTOMERS.concat(['Frac','Disposal','Offload']).filter(s=>DATA.some(d=>d.src===s)).map(s=>'<i style="background:'+escAttr(PIN_COLOR[s]||'#888')+'"></i><span>'+esc(s==='Frac'?'Active frac':s==='Offload'?'Oil offload':s)+'</span>').join('')
     + '<i style="background:transparent;border-color:#ff2828;border-width:3px"></i><span>Road alert on the route</span>'
     + '<i class="ln"></i><span>Truck way in (from Titan truck GPS) &mdash; pick a pad</span>'
     + BRIDGE.slice().reverse().map(b=>'<i class="dia" style="background:'+escAttr(b.c)+(b.c==='#111111'?';border-color:#ff3b3b':'')+'"></i><span>Bridge: '+esc(b.t)+'</span>').join('');
