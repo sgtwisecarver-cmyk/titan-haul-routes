@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v32.9 — Nov 2026";
+const VERSION = "v33.0 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1869,7 +1869,13 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // never edit by hand). Busier roads cost less, service roads / tracks more. Voice directions: v32.7 below.
 // Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
 // and never used a road no Titan truck drives.
-const TNAV_CARDS = new Set(['eog-shula']);
+// v33.0 (Rick OK 11/25): the pads that passed the fair test - truck_net.py --check-all (titan-dispatch
+// tools/route-miner/truck-nav-check.md): 20+ trips in the last month routed on a road map built only from earlier GPS,
+// median 90%+ on the roads the driver actually took. Lambeau also passed but its card is hidden (frac).
+const TNAV_CARDS = new Set(['eog-shula', 'eog-hollyfield-watkins-haul-route', 'eog-lloyd-smith-cr-org-pad', 'eog-toot-cr-mon-pad',
+  'eog-watkins-34-14-6-pad', 'eog-edison-ruby-cr-org-pad', 'eog-windy-ridge-platform-cr-org-pad', 'eog-oliver-cr-mon-pad',
+  'disposal-eog-tus-chk-tus-swd', 'eog-snyder-cr-uni-pad', 'expand-rothenbuler-f-mnr', 'ascent-rock-ridge', 'eog-krantz-cr-mon-pad',
+  'eog-davis-trust-19-11-5-pad', 'expand-fuchs-dietrich-a', 'expand-craig-miller']);
 let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null, TNAV_AUTO = null;
 const EMPTY_FC = {type:'FeatureCollection', features:[]};
 function loadTnet(){
@@ -2105,10 +2111,18 @@ function vnBuild(d, r){
   const e = line[line.length-1], p = padPoint(d), pb = vnAt(V, V.total - 60);   // the lease road: the side the pad is on
   let side = '';
   if(p && distM(e[0], e[1], p[1], p[0]) > 40){ const t = turnDeg(bearing(pb, e), bearing(e, [p[1], p[0]])); side = Math.abs(t) < 30 ? 'straight ahead' : t > 0 ? 'on the right' : 'on the left'; }
-  V.end = {pad:d.pad, side};
+  V.end = {pad:vnPadName(d), side, disposal:d.src === 'Disposal'};
   return V;
 }
-function vnEndText(V){ return 'The '+V.end.pad+' lease road is '+(V.end.side || 'ahead')+'.'; }
+// a pad name the phone can say and a driver knows: TOOT CR MON PAD -> Toot, WATKINS 34-14-6 PAD -> Watkins 34-14-6,
+// Hollyfield & Watkins Haul Route -> Hollyfield and Watkins, EOG TUS (CHK TUS SWD) -> EOG TUS
+function vnPadName(d){
+  let t = String(d.pad || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bhaul route\b/i, '').replace(/\s+(CR\s+)?(ORG|MON|UNI)\s+PAD\b/i, '')
+    .replace(/\s+(PAD|MNR)\b/i, '').replace(/\s+[A-Z]$/, '').replace(/\s*\/\s*/g, ' ').replace(/&/g, 'and').replace(/\s+/g, ' ').trim();
+  if(t === t.toUpperCase()) t = t.toLowerCase().replace(/\b[a-z]/g, c=>c.toUpperCase()).replace(/\bEog\b/g, 'EOG').replace(/\bTus\b/g, 'TUS');
+  return t || d.pad;
+}
+function vnEndText(V){ return 'The '+V.end.pad+(V.end.disposal ? ' entrance' : ' lease road')+' is '+(V.end.side || 'ahead')+'.'; }
 function vnLead(V){
   const b0 = bearing(vnAt(V, 0), vnAt(V, 80)), on = V.firstRoad ? ' on '+V.firstRoad : V.firstToward ? ' toward '+V.firstToward : '';
   if(V.r.join_m > VN_OFF_M) return 'First get to '+(V.firstRoad || V.firstToward || 'the green line')+', '+distWords(V.r.join_m)+' away, on the dashed line.';
@@ -2133,7 +2147,7 @@ function vnStart(d, r){
   wakeOn(); watchMe();
   if(MAP && !MAP._vnDrag){ MAP._vnDrag = true; MAP.on('dragstart', ()=>{ if(VNAV) VNAV.follow = Date.now() + 20000; }); }   // you moved the map: leave it 20 s
   VNLAST = {t:'', at:0};
-  vnSay('Truck route to '+d.pad+', '+distWords(VNAV.total)+'. '+vnLead(VNAV), true);   // inside the tap: phones allow speech from here on
+  vnSay('Truck route to '+vnPadName(d)+', '+distWords(VNAV.total)+'. '+vnLead(VNAV), true);   // inside the tap: phones allow speech from here on
   vnPaint(); vnFollow(true);
 }
 function vnStop(){
@@ -2227,7 +2241,7 @@ function vnPaint(){
   const st = V.steps[V.next], D = Math.max(0, (st ? st.s : V.total) - V.s), $ = id => document.getElementById(id);
   $('vnArrow').textContent = V.offMode ? '⚠' : V.done || !st ? '\u{1F3C1}' : st.arrow;
   $('vnDist').textContent = V.offMode ? 'Off the truck roads' : V.done ? 'Lease road' : distShort(D);
-  $('vnRoad').textContent = V.offMode ? 'Get back to the green line' : st ? st.short : V.end.pad+' lease road'+(V.end.side ? ' — '+V.end.side : '');
+  $('vnRoad').textContent = V.offMode ? 'Get back to the green line' : st ? st.short : V.end.pad+(V.end.disposal ? ' entrance' : ' lease road')+(V.end.side ? ' — '+V.end.side : '');
   $('vnLeft').textContent = V.done ? 'Follow the route card from here' : distShort(Math.max(0, V.total - V.s))+' to '+V.end.pad;
   $('vnMute').textContent = VNVOICE ? '\u{1F50A} Voice' : '\u{1F507} Muted';
   $('vnMute').setAttribute('aria-pressed', String(VNVOICE));
