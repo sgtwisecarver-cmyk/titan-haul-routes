@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://basemap.nationalmap.gov; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://basemap.nationalmap.gov; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
+<head><meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://titanroutes.goatcounter.com blob: https://tiles.openfreemap.org https://basemap.nationalmap.gov https://maps.ohio.gov; connect-src 'self' https://titanroutes.goatcounter.com https://docs.google.com https://*.googleusercontent.com https://titan-ohgo-alerts.titan-dispatch-board.workers.dev https://tiles.openfreemap.org https://basemap.nationalmap.gov https://maps.ohio.gov; frame-src 'none'; worker-src 'self' blob:; media-src 'self'; manifest-src 'self'; base-uri 'none'; object-src 'none'; form-action 'self'; child-src 'self' blob:"><meta name="referrer" content="strict-origin-when-cross-origin">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Titan Energy Transportation — Haul Route Lookup</title>
@@ -579,7 +579,7 @@ window.TITAN_PADS=(function(){
       <button id="offClear" class="btn flag" type="button" style="margin-top:8px">Clear saved maps</button></div>
     <div class="mvhead" style="margin-top:14px"><b>Key</b></div>
     <div class="mvkey" id="mapKey"></div>
-    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Satellite: USGS The National Map imagery (public domain).</div>
+    <div class="mvsrc">Bridges: ODOT bridge inventory (Ohio) and the FHWA National Bridge Inventory (WV, PA). Weight bands are estimated from each bridge's load rating against an 80,000&nbsp;lb legal truck &mdash; <b>the posted sign on the bridge always rules.</b> Blue truck route: mined from Titan truck GPS, not an official route &mdash; the written haul route on the card rules. Map &copy; OpenFreeMap &middot; &copy; OpenMapTiles &middot; &copy; OpenStreetMap contributors &middot; Satellite: Ohio Statewide Imagery Program (OGRIP, Ohio DAS/OIT) in Ohio; USGS The National Map imagery (public domain) elsewhere.</div>
   </div>
   <div id="mapSheet" class="mvsheet" hidden role="dialog" aria-label="Selected place"></div>
 </div>
@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v33.2 — Nov 2026";
+const VERSION = "v33.3 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1510,13 +1510,28 @@ function wayGeo(d){
   if(A && A.entrance) f.push({type:'Feature', geometry:{type:'Point', coordinates:[A.entrance[1],A.entrance[0]]}, properties:{e:1}});
   return {type:'FeatureCollection', features:f};
 }
+const USGS_SAT = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryOnly/MapServer/tile/';
+const OHIO_SAT = 'https://maps.ohio.gov/image/rest/services/osip_most_current_cache/MapServer/tile/';
+const OHIO_SAT_BOX = [-84.83, 38.40, -80.51, 42.33];   // Ohio's tiles stop at the state line (404 past it)
 function mapStyle(){
   if(MAPSAT) return {version:8, glyphs:'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
-    // v30.9: USGS The National Map imagery with road names (public domain - no usage rules, fine to keep offline).
-    // Its tiles stop at zoom 16; the map enlarges z16 beyond that.
-    sources:{sat:{type:'raster', tiles:['https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}'], tileSize:256, maxzoom:16,
-                  attribution:'Imagery: USGS The National Map'}},
-    layers:[{id:'sat', type:'raster', source:'sat'}]};
+    // v33.3 (Rick 11/26: "higher resolution map"): Ohio's own statewide aerials (OSIP, ~6 in/pixel, leaf-off, public)
+    // to zoom 20 over USGS imagery (z16, ~2 m/pixel) underneath for PA/WV. USGS retired USGSImageryTopo (imagery +
+    // road names) - it answered "service not found" on 11/26 - so road names now come from OpenFreeMap on top.
+    sources:{usgs:{type:'raster', tiles:[USGS_SAT + '{z}/{y}/{x}'], tileSize:256, maxzoom:16, attribution:'Imagery: USGS The National Map'},
+             ohio:{type:'raster', tiles:[OHIO_SAT + '{z}/{y}/{x}'], tileSize:256, maxzoom:20, bounds:OHIO_SAT_BOX,
+                   attribution:'Imagery: Ohio OSIP (OGRIP)'},
+             omt:{type:'vector', url:'https://tiles.openfreemap.org/planet', attribution:'&copy; OpenStreetMap contributors'}},
+    layers:[{id:'sat', type:'raster', source:'usgs'},
+            {id:'sat-oh', type:'raster', source:'ohio'},
+            {id:'sat-roads', type:'symbol', source:'omt', 'source-layer':'transportation_name', minzoom:12,
+             layout:{'symbol-placement':'line', 'text-field':['coalesce', ['get', 'name'], ['get', 'ref']], 'text-font':['Noto Sans Bold'],
+                     'text-size':['interpolate', ['linear'], ['zoom'], 12, 11, 18, 15], 'text-max-angle':30},
+             paint:{'text-color':'#ffffff', 'text-halo-color':'rgba(0,0,0,.85)', 'text-halo-width':1.6}},
+            {id:'sat-places', type:'symbol', source:'omt', 'source-layer':'place', minzoom:9, maxzoom:15,
+             filter:['in', ['get', 'class'], ['literal', ['city', 'town', 'village']]],
+             layout:{'text-field':['get', 'name'], 'text-font':['Noto Sans Bold'], 'text-size':13},
+             paint:{'text-color':'#ffffff', 'text-halo-color':'rgba(0,0,0,.85)', 'text-halo-width':1.8}}]};
   return 'https://tiles.openfreemap.org/styles/' + (effTheme()==='dark' ? 'dark' : 'liberty');
 }
 function loadMapLib(){
@@ -1694,9 +1709,8 @@ function openMap(focus){
   loadMapLib().then(()=>{
     if(!MAP){
       MAP = new maplibregl.Map({container:'mapbox', style:mapStyle(), bounds:OHIO_BOX, fitBoundsOptions:{padding:30},
-                                attributionControl:{compact:true}, dragRotate:false, pitchWithRotate:false, maxZoom:18});
+                                attributionControl:{compact:true}, dragRotate:false, pitchWithRotate:false, maxZoom:20});
       MAP.touchZoomRotate.disableRotation();
-      MAP.setMaxZoom(MAPSAT ? 17 : 18);   // USGS imagery stops at z16: past 17 it's only blur
       MAP.addControl(new maplibregl.NavigationControl({showCompass:false}), 'bottom-right');
       // our own locate button: MapLibre's greys itself out once location is refused, so a tap did nothing (iPhone home-screen icon)
       MAP.addControl({onAdd: ()=>{ const c=document.createElement('div'); c.className='maplibregl-ctrl maplibregl-ctrl-group';
@@ -1783,7 +1797,7 @@ document.getElementById('mapStyleSeg').addEventListener('click', e=>{
   const b = e.target.closest('button'); if(!b) return;
   const sat = b.dataset.sat==='1'; if(sat===MAPSAT) return;
   MAPSAT = sat; lsSet('titan_mapsat', sat); paintMapUI();
-  if(MAP){ MAP.setStyle(mapStyle(), {diff:false}); MAP._titanTheme = effTheme(); MAP.setMaxZoom(MAPSAT ? 17 : 18); }
+  if(MAP){ MAP.setStyle(mapStyle(), {diff:false}); MAP._titanTheme = effTheme(); }
 });
 document.getElementById('mapBrTog').addEventListener('click', ()=>{
   MAPBR = !MAPBR; lsSet('titan_mapbridges', MAPBR); paintMapUI(); loadBridges();
@@ -2287,10 +2301,16 @@ document.getElementById('vnMute').addEventListener('click', ()=>{
 // ===== v30.8: save this area for offline =====
 // Saves what a driver needs to find a lease road with no signal, for the area on screen: the street map (OpenFreeMap
 // vector tiles to zoom 14 - the map draws closer zooms from them - plus its style, fonts and sprites) and the
-// satellite view from USGS imagery (public domain) to zoom 16. OpenFreeMap allows offline saves of at most 3,000
-// tiles / 50 MB, 4 requests at a time; the same pace is used for USGS. The service worker keeps them (sw.js).
-const OFM = 'https://tiles.openfreemap.org', USGS = 'https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/';   // the same tiles the satellite view shows
-const SAVE_PARALLEL = 4, OFM_MAX_TILES = 3000, SAT_MAX_TILES = 2500, VEC_ZMIN = 8, VEC_ZMAX = 14, SAT_ZMAX = 16;
+// satellite view (v33.3: Ohio OSIP aerials to zoom 18 in Ohio, USGS imagery to 16 elsewhere). OpenFreeMap allows
+// offline saves of at most 3,000 tiles / 50 MB, 4 requests at a time; the same pace is used for the imagery. The
+// service worker keeps them (sw.js).
+const OFM = 'https://tiles.openfreemap.org';
+const SAVE_PARALLEL = 4, OFM_MAX_TILES = 3000, SAT_MAX_TILES = 2500, VEC_ZMIN = 8, VEC_ZMAX = 14, SAT_ZMAX = 18;
+function satTileUrl(z, x, y){                  // the tile the satellite view shows there: Ohio's inside Ohio, else USGS (z16 max)
+  const n = 2 ** z, lon = (x + .5) / n * 360 - 180, lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + .5) / n))) * 180 / Math.PI;
+  const oh = lon > OHIO_SAT_BOX[0] && lon < OHIO_SAT_BOX[2] && lat > OHIO_SAT_BOX[1] && lat < OHIO_SAT_BOX[3];
+  return oh ? OHIO_SAT + z + '/' + y + '/' + x : z <= 16 ? USGS_SAT + z + '/' + y + '/' + x : null;
+}
 let SAVING = false;
 function swAsk(msg, ms = 8000){
   const ctl = navigator.serviceWorker && navigator.serviceWorker.controller;
@@ -2341,11 +2361,11 @@ async function saveArea(){
     for(let vz = VEC_ZMIN; vz <= VEC_ZMAX; vz++) vec = vec.concat(rangeUrls(tileRange(b, vz), vz, (zz, x, y) => tpl.replace('{z}', zz).replace('{x}', x).replace('{y}', y)));
   }catch(e){ toast('No signal right now — save the area while you have signal'); return; }
   if(vec.length + files.size > OFM_MAX_TILES){ toast('That area is too big to save — zoom in a little'); return; }
-  // satellite: USGS from about the current zoom to 16, dropping the closest zooms if the area is large
+  // satellite: from about the current zoom to 18 (Ohio) / 16 (USGS), dropping the closest zooms if the area is large
   let satMin = Math.max(11, Math.floor(z) - 1), satMax = SAT_ZMAX, sat = [];
   const satCount = () => { let n = 0; for(let sz = satMin; sz <= satMax; sz++) n += rangeCount(tileRange(b, sz)); return n; };
   while(satMax > 14 && satCount() > SAT_MAX_TILES) satMax--;
-  if(satCount() <= SAT_MAX_TILES) for(let sz = satMin; sz <= satMax; sz++) sat = sat.concat(rangeUrls(tileRange(b, sz), sz, (zz, x, y) => USGS + zz + '/' + y + '/' + x));
+  if(satCount() <= SAT_MAX_TILES) for(let sz = satMin; sz <= satMax; sz++) sat = sat.concat(rangeUrls(tileRange(b, sz), sz, satTileUrl).filter(Boolean));
   else satMax = 0;
   const all = [...files, ...vec, ...sat];
   SAVING = true; let done = 0, failed = 0, i = 0;

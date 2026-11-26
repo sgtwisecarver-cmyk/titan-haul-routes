@@ -1,5 +1,5 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v88';
+const VER = 'titan-v89';
 // route maps and the safety video live on their own site (v31.0) so this one publishes fast
 const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
@@ -60,7 +60,7 @@ function padsChanged() {
 // (an IndexedDB index of url/size/last use).
 const TILES = 'titan-tiles-v1';
 const TILE_CAP = 150 * 1024 * 1024;            // bytes
-const TILE_HOSTS = ['tiles.openfreemap.org', 'basemap.nationalmap.gov'];
+const TILE_HOSTS = ['tiles.openfreemap.org', 'basemap.nationalmap.gov', 'maps.ohio.gov'];   // v33.3: Ohio OSIP aerials
 const CLEAR_PNG = Uint8Array.from(atob('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='), c => c.charCodeAt(0));
 // no tile and no signal: an empty tile instead of an error (nothing drawn there, no red console)
 function emptyTile(url) {
