@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v33.1 — Nov 2026";
+const VERSION = "v33.2 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1869,20 +1869,26 @@ document.getElementById('mapSndTog').addEventListener('click', ()=>{
 // never edit by hand). Busier roads cost less, service roads / tracks more. Voice directions: v32.7 below.
 // Rick's Shula test (11/25): on 155 real trips the route matched the driver's roads 89% vs Google 40-50%,
 // and never used a road no Titan truck drives.
-// v33.1 (Rick OK 11/25): the pads that pass the fair test - truck_net.py --check-all (titan-dispatch
+// v33.2 (11/25): the pads that pass the fair test - truck_net.py --check-all (titan-dispatch
 // tools/route-miner/truck-nav-check.md): 10+ trips in the last month routed on a road map built only from earlier GPS,
-// median 85%+ on the roads the driver actually took and 90%+ on 60%+ of trips. Routes go by drive time and favor
-// interstates, US and state routes (Rick: "always prefer state routes and interstate if possible"). Hidden cards left off.
-const TNAV_CARDS = new Set(['expand-mcfrederick', 'gulfport-harvey-haul-route', 'gulfport-reed-haul-route',
+// median 85%+ on the roads the driver actually took and 90%+ on 60%+ of trips. Routes go by loaded-truck drive time,
+// favor interstates, US and state routes (Rick: "always prefer state routes and interstate if possible"), and drive
+// divided highways and ramps one way. Hidden cards (a frac's regular card) left off.
+const TNAV_CARDS = new Set(['disposal-ego-mozena-1', 'disposal-clearwater-3', 'expand-mcfrederick',
+  'gulfport-harvey-haul-route', 'gulfport-safreed-haul-route', 'gulfport-reed-haul-route', 'disposal-david-r-hill',
   'eog-shula', 'eog-sproul-tc-rsh-pad', 'eog-hollyfield-watkins-haul-route', 'gulfport-campbell-haul-route',
-  'gulfport-west-haul-route', 'eog-lloyd-smith-cr-org-pad', 'eog-toot-cr-mon-pad', 'eog-watkins-34-14-6-pad',
-  'eog-edison-ruby-cr-org-pad', 'gulfport-jac-haul-route', 'eog-windy-ridge-platform-cr-org-pad',
-  'eog-oliver-cr-mon-pad', 'expand-emerson-belle', 'disposal-eog-tus-chk-tus-swd', 'gulfport-valerie-haul-route',
-  'eog-snyder-cr-uni-pad', 'gulfport-westhawk-haul-route', 'expand-rothenbuler-f-mnr', 'eog-pearley-tc-per-pad',
-  'eog-krantz-cr-mon-pad', 'ascent-donna-lnd-gr', 'eog-davis-trust-19-11-5-pad', 'expand-fuchs-dietrich-a',
-  'expand-craig-miller', 'expand-wiley', 'eog-berger-tc-per-pad', 'gulfport-paulus-haul-route', 'eog-cobalt',
+  'gulfport-west-haul-route', 'eog-lloyd-smith-cr-org-pad', 'ascent-skull-fork', 'eog-toot-cr-mon-pad',
+  'eog-watkins-34-14-6-pad', 'gulfport-limestone-pad-haul-route', 'ascent-ruby-opal', 'eog-edison-ruby-cr-org-pad',
+  'gulfport-jac-haul-route', 'gulfport-yankee-haul-route', 'ascent-stella', 'ascent-ezekial',
+  'eog-windy-ridge-platform-cr-org-pad', 'eog-oliver-cr-mon-pad', 'disposal-eog-tus-chk-tus-swd',
+  'expand-emerson-belle', 'gulfport-valerie-haul-route', 'gulfport-kinyo-2-0-pad-haul-route',
+  'eog-snyder-cr-uni-pad', 'gulfport-westhawk-haul-route', 'expand-rothenbuler-f-mnr', 'ascent-victor',
+  'eog-pearley-tc-per-pad', 'ascent-rock-ridge', 'eog-krantz-cr-mon-pad', 'ascent-maldon', 'ascent-donna-lnd-gr',
+  'eog-davis-trust-19-11-5-pad', 'expand-fuchs-dietrich-a', 'expand-craig-miller', 'expand-wiley', 'ascent-winston',
+  'gulfport-cattle-haul-route', 'gulfport-hendershot-haul-route', 'eog-berger-tc-per-pad',
+  'gulfport-paulus-haul-route', 'ascent-bloomingdale-routes', 'ascent-albert-kkw-bl', 'eog-cobalt',
   'eog-deucker-27-12-5-pad', 'gulfport-donato-haul-route', 'eog-wendell-cr-org-pad', 'expand-pittman-pad-2',
-  'expand-randall', 'gulfport-arnold-haul-route']);
+  'gulfport-arnold-haul-route']);
 let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null, TNAV_AUTO = null;
 const EMPTY_FC = {type:'FeatureCollection', features:[]};
 function loadTnet(){
@@ -1904,6 +1910,9 @@ function tLine(N, i){
   pts.push([N.lat[l[1]], N.lon[l[1]]]);
   return pts;
 }
+// v33.2: links[i][7] = one-way (trucknet.json, truck_net.py): 0 both ways, 1 only first -> second junction, -1 only
+// second -> first. Interstates, trunk highways and ramps are one road per direction; each goes the way trucks drive it.
+function tCanGo(l, from){ const ow = l[7] || 0; return !ow || (ow > 0 ? from === l[0] : from === l[1]); }
 // cheapest way from every junction to dest (Dijkstra with a binary heap); via[u] = the link to take from u
 function tTree(N, dest){
   const n = N.lat.length, dist = new Float64Array(n).fill(Infinity), via = new Int32Array(n).fill(-1), h = [];
@@ -1915,6 +1924,7 @@ function tTree(N, dest){
   while(h.length){
     const [c, u] = pop(); if(c > dist[u]) continue;
     for(const i of N.adj[u]){ const l = N.links[i], v = l[0]===u ? l[1] : l[0], nc = c + l[4];
+      if(!tCanGo(l, v)) continue;                              // searching back from the pad: the truck drives v -> u
       if(nc < dist[v]){ dist[v] = nc; via[v] = i; push(nc, v); } }
   }
   return {dest, dist, via};
@@ -1928,13 +1938,21 @@ const UTURN_COST = 5000;
 function tRoute(N, T, me, hd){
   let best = null;
   N.links.forEach((l, i)=>{
-    const pts = tLine(N, i);
-    for(let k=0; k<pts.length; k++){ const d = distM(me[0], me[1], pts[k][0], pts[k][1]); if(!best || d < best.d) best = {d, i, k, pts}; }
+    const pts = tLine(N, i), ow = l[7] || 0;
+    for(let k=0; k<pts.length; k++){
+      let d = distM(me[0], me[1], pts[k][0], pts[k][1]);
+      if(ow && hd != null && d < 100){                         // the other side of a divided highway is not your road
+        const a = pts[Math.max(0, k-1)], b = pts[Math.min(pts.length-1, k+1)], runs = ow > 0 ? bearing(a, b) : bearing(b, a);
+        if(Math.abs(turnDeg(hd, runs)) > 100) d += 200;
+      }
+      if(!best || d < best.d) best = {d, i, k, pts};
+    }
   });
   if(!best || best.d > 50000) return null;
   const l = N.links[best.i], toA = best.pts.slice(0, best.k+1).reverse(), toB = best.pts.slice(best.k);
   const frac = p => l[3] ? pathLen(p)/l[3] : 0;
   let cA = T.dist[l[0]] + l[4]*frac(toA), cB = T.dist[l[1]] + l[4]*frac(toB);
+  if(!tCanGo(l, l[1])) cA = Infinity; if(!tCanGo(l, l[0])) cB = Infinity;   // a one-way road: only the way it runs
   if(hd != null && best.d < 100){
     const away = p => p.length > 1 && Math.abs(turnDeg(hd, bearing(p[0], p[Math.min(3, p.length-1)]))) > 100;
     if(away(toA)) cA += UTURN_COST; if(away(toB)) cB += UTURN_COST;
@@ -2106,13 +2124,19 @@ function vnBuild(d, r){
     const t = turnDeg(bearing(vnAt(V, s0 - 40), vnAt(V, s0)), bearing(vnAt(V, s1), vnAt(V, s1 + 50))), A = Math.abs(t), side = t > 0 ? 'right' : 'left';
     const shared = g.refs.find(x=>/^(SR|US|I) /.test(x) && P[k-1].refs.includes(x));
     if(shared && A < 30) continue;                            // the same state route straight on under a new street name
-    if(!named(g) && A < 20) continue;                         // an unnamed stretch straight ahead: nothing to say
+    // off an interstate onto an unnamed ramp toward a road that isn't one: the exit (it runs nearly straight, so say it)
+    const exitI = !named(g) && named(P[k-1]) && /^Interstate /.test(sayRoad(P[k-1], g)) && ahead(k) && !/^Interstate /.test(say2(ahead(k)));
+    if(!named(g) && A < 20 && !exitI) continue;               // an unnamed stretch straight ahead: nothing to say
     const verb = A < 20 ? 'Continue' : A < 45 ? 'Keep '+side : A < 150 ? 'Turn '+side : 'Make a sharp '+side;
     let road, text, short;
+    const prev = V.steps[V.steps.length-1];
     if(shared){ road = sayRoad({refs:[shared]}); text = verb+' to stay on '+road+'.'; short = shared; }
-    else if(named(g)){ road = sayRoad(g, P[k+1]); text = (A < 20 ? 'Continue onto ' : verb+' onto ')+road+'.'; short = showRoad(g, P[k+1]); }
-    else { const t2 = ahead(k); road = 'this road'; text = verb+(t2 ? ' toward '+say2(t2) : '')+'.'; short = t2 ? 'toward '+showRoad(t2, P[P.indexOf(t2)+1]) : 'ramp'; }
-    V.steps.push({s:s0, road, short, text,
+    else if(named(g)){ road = sayRoad(g, P[k+1]); short = showRoad(g, P[k+1]);
+      // up the ramp onto the interstate it was heading for ("keep right toward Interstate 77 North"): merge, whatever the angle
+      text = prev && prev.toward === road && !named(P[k-1]) && /^Interstate /.test(road) ? 'Merge onto '+road+'.' : (A < 20 ? 'Continue onto ' : verb+' onto ')+road+'.'; }
+    else { const t2 = ahead(k), where = 'the '+vnPadName(d)+(d.src === 'Disposal' ? ' entrance' : ' lease road');
+      road = 'this road'; text = exitI ? 'Take the exit toward '+say2(t2)+'.' : verb+' toward '+(t2 ? say2(t2) : where)+'.'; short = t2 ? 'toward '+showRoad(t2, P[P.indexOf(t2)+1]) : 'toward '+vnPadName(d); }
+    V.steps.push({s:s0, road, short, text, toward:!named(g) && ahead(k) ? say2(ahead(k)) : null,
       arrow: A < 20 ? '↑' : A < 45 ? (t > 0 ? '↗' : '↖') : (t > 0 ? '↱' : '↰')});
   }
   const e = line[line.length-1], p = padPoint(d), pb = vnAt(V, V.total - 60);   // the lease road: the side the pad is on
@@ -2124,9 +2148,10 @@ function vnBuild(d, r){
 // a pad name the phone can say and a driver knows: TOOT CR MON PAD -> Toot, WATKINS 34-14-6 PAD -> Watkins 34-14-6,
 // Hollyfield & Watkins Haul Route -> Hollyfield and Watkins, EOG TUS (CHK TUS SWD) -> EOG TUS, SPROUL TC RSH PAD -> Sproul
 function vnPadName(d){
-  let t = String(d.pad || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bhaul route\b/i, '').replace(/\s+((CR|TC)\s+)?[A-Z]{3}\s+PAD\b/, '').replace(/\s+LND\s+GR\b/i, '')
+  let t = String(d.pad || '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\bhaul route\b/i, '').replace(/\s+((CR|TC)\s+)?[A-Z]{3}\s+PAD\b/, '').replace(/\s+LND\s+GR\b/i, '').replace(/\s+routes?$/i, '')
     .replace(/\s+(PAD|MNR)\b/i, '').replace(/\s+[A-Z]$/, '').replace(/\s*\/\s*/g, ' ').replace(/&/g, 'and').replace(/\s+/g, ' ').trim();
-  if(t === t.toUpperCase()) t = t.toLowerCase().replace(/\b[a-z]/g, c=>c.toUpperCase()).replace(/\bEog\b/g, 'EOG').replace(/\bTus\b/g, 'TUS');
+  if(t === t.toUpperCase()) t = t.replace(/[A-Z]{4,}/g, w=>w.charAt(0)+w.slice(1).toLowerCase());   // TOOT -> Toot; EGO, JAC stay
+  else t = t.replace(/(\s+[A-Z]{2,3})+$/, '');                      // Albert KKW BL -> Albert (lease codes)
   return t || d.pad;
 }
 function vnEndText(V){ return 'The '+V.end.pad+(V.end.disposal ? ' entrance' : ' lease road')+' is '+(V.end.side || 'ahead')+'.'; }
