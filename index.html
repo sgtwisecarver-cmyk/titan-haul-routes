@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v33.3 — Nov 2026";
+const VERSION = "v33.4 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1949,25 +1949,39 @@ function pathLen(p){ let m = 0; for(let i=1; i<p.length; i++) m += distM(p[i-1][
 // hd (degrees, optional): the way you're driving. Going back the other way costs UTURN_COST more, so a new route
 // carries on ahead unless turning around saves real distance - a loaded truck can't just flip around.
 const UTURN_COST = 5000;
+// v33.4: the nearest point is ON the road, between its points, not the nearest of its points. Interstate pieces have
+// points up to miles apart (half over 250 m), so measuring to points told drivers on I-77 they were off the truck roads.
+// If the nearest road can't reach the pad (a one-way piece that dead-ends in the map), the next nearest is tried.
 function tRoute(N, T, me, hd){
-  let best = null;
+  const [kx, ky] = metersPerDeg(me[0]), near = [];
   N.links.forEach((l, i)=>{
     const pts = tLine(N, i), ow = l[7] || 0;
-    for(let k=0; k<pts.length; k++){
-      let d = distM(me[0], me[1], pts[k][0], pts[k][1]);
-      if(ow && hd != null && d < 100){                         // the other side of a divided highway is not your road
-        const a = pts[Math.max(0, k-1)], b = pts[Math.min(pts.length-1, k+1)], runs = ow > 0 ? bearing(a, b) : bearing(b, a);
+    let b = null;
+    for(let k=0; k<pts.length-1; k++){
+      const ax=(pts[k][1]-me[1])*kx, ay=(pts[k][0]-me[0])*ky, bx=(pts[k+1][1]-me[1])*kx, by=(pts[k+1][0]-me[0])*ky;
+      const dx=bx-ax, dy=by-ay, q=dx*dx+dy*dy, t = q ? Math.max(0, Math.min(1, -(ax*dx+ay*dy)/q)) : 0;
+      const raw = Math.hypot(ax+t*dx, ay+t*dy);
+      let d = raw;
+      if(ow && hd != null && raw < 100){                       // the other side of a divided highway is not your road
+        const runs = ow > 0 ? bearing(pts[k], pts[k+1]) : bearing(pts[k+1], pts[k]);
         if(Math.abs(turnDeg(hd, runs)) > 100) d += 200;
       }
-      if(!best || d < best.d) best = {d, i, k, pts};
+      if(!b || d < b.d) b = {d, raw, i, k, t, pts};
     }
+    if(b && b.raw <= 50000) near.push(b);
   });
-  if(!best || best.d > 50000) return null;
-  const l = N.links[best.i], toA = best.pts.slice(0, best.k+1).reverse(), toB = best.pts.slice(best.k);
+  near.sort((x, y)=>x.d - y.d);
+  for(const c of near.slice(0, 12)){ const r = tRouteFrom(N, T, hd, c); if(r) return r; }
+  return null;
+}
+function tRouteFrom(N, T, hd, best){
+  const P = best.pts[best.k], Q = best.pts[best.k+1], snap = [P[0] + best.t*(Q[0]-P[0]), P[1] + best.t*(Q[1]-P[1])];
+  const lead = (p, rest) => distM(p[0], p[1], rest[0][0], rest[0][1]) < 1 ? rest : [p].concat(rest);
+  const l = N.links[best.i], toA = lead(snap, best.pts.slice(0, best.k+1).reverse()), toB = lead(snap, best.pts.slice(best.k+1));
   const frac = p => l[3] ? pathLen(p)/l[3] : 0;
   let cA = T.dist[l[0]] + l[4]*frac(toA), cB = T.dist[l[1]] + l[4]*frac(toB);
   if(!tCanGo(l, l[1])) cA = Infinity; if(!tCanGo(l, l[0])) cB = Infinity;   // a one-way road: only the way it runs
-  if(hd != null && best.d < 100){
+  if(hd != null && best.raw < 100){
     const away = p => p.length > 1 && Math.abs(turnDeg(hd, bearing(p[0], p[Math.min(3, p.length-1)]))) > 100;
     if(away(toA)) cA += UTURN_COST; if(away(toB)) cB += UTURN_COST;
   }
@@ -1981,7 +1995,7 @@ function tRoute(N, T, me, hd){
     if(legs.length && legs[legs.length-1][0]===nm) legs[legs.length-1][1] += m[3]; else legs.push([nm, m[3], at]);
     u = fwd ? m[1] : m[0];
   }
-  return {line, join_m:best.d, legs:legs.filter(g=>g[1] >= 30), raw:legs, metres:pathLen(line)};
+  return {line, join_m:best.raw, legs:legs.filter(g=>g[1] >= 30), raw:legs, metres:pathLen(line)};
 }
 const ROAD_ABBR = [[/\bNorthwest\b/g,'NW'],[/\bNortheast\b/g,'NE'],[/\bSouthwest\b/g,'SW'],[/\bSoutheast\b/g,'SE'],
   [/\bRoad\b/g,'Rd'],[/\bAvenue\b/g,'Ave'],[/\bStreet\b/g,'St'],[/\bDrive\b/g,'Dr'],[/\bHighway\b/g,'Hwy'],[/\bLane\b/g,'Ln']];
