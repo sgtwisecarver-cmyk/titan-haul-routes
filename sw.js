@@ -1,11 +1,11 @@
 // Titan Haul Routes service worker — offline support
-const VER = 'titan-v90';
+const VER = 'titan-v91';
 // route maps and the safety video live on their own site (v31.0) so this one publishes fast
 const FILES = 'https://sgtwisecarver-cmyk.github.io/titan-haul-routes-files/';
 const CORE = 'titan-core-' + VER;
 const PDFS = 'titan-pdfs-v1';
 const SHELL = [
-  './index.html', './manifest.json', './data/approaches.json',
+  './index.html', './manifest.json', './data/approaches.json', './data/tnavcards.json',
   './vendor/maplibre-gl-4.7.1.js', './vendor/maplibre-gl-4.7.1.css', './vendor/goatcounter-count.js',
   // the pad cards (v30.6) - keep in step with tools/pads.py FILES
   './data/pads/index.json', './data/pads/ascent.json', './data/pads/eog.json', './data/pads/gulfport.json',

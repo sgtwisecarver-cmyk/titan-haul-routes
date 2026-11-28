@@ -588,7 +588,7 @@ window.TITAN_PADS=(function(){
 let DATA = [];            // the pad cards: data/pads/*.json via TITAN_PADS (<head>), set up in bootData()
 let DATA_READY = false;
 let paintCustTiles = () => {};   // the customer picker's tiles and counts (needs the cards)
-const VERSION = "v33.4 — Nov 2026";
+const VERSION = "v33.5 — Nov 2026";
 // version moved out of header; visible on About page via page source
 
 const LOGOS = {
@@ -1904,6 +1904,20 @@ const TNAV_CARDS = new Set(['disposal-ego-mozena-1', 'disposal-clearwater-3', 'e
   'eog-deucker-27-12-5-pad', 'gulfport-donato-haul-route', 'eog-wendell-cr-org-pad', 'expand-pittman-pad-2',
   'gulfport-arnold-haul-route']);
 let TNET = null, TNETLOAD = null, TTREE = null, TGEO = null, TNAV_ID = null, TNAV_AUTO = null;
+// v33.5 (Rick 11/28): pads whose way in is CONFIRMED - 5 different trucks came in the same roads, on the pad's RUMA
+// route, in the last 90 days (a lease road straight off a state / US route / interstate needs no RUMA); interstates,
+// US and state routes on the truck road map are approved as they are. data/tnavcards.json (titan-dispatch
+// tools/route-miner/confirm_ways.py, weekly, never edit by hand): {generated (= trucknet.json's), near_m, near_x,
+// cards: {id: {dest: junction, in: [links of the confirmed local roads]}}}. These pads get the truck route too; near the
+// pad, a named local road that isn't on a confirmed way in costs near_x more, so the route comes in the confirmed way.
+// Only used with the trucknet.json it was built with (same `generated`) - otherwise the plain route, as before.
+let TNC = null;
+(function loadTnc(){ fetch('data/tnavcards.json').then(r=>r.ok?r.json():null).then(j=>{ if(!(j&&j.cards)) return; TNC = j;
+  const add = Object.keys(j.cards).filter(id=>!TNAV_CARDS.has(id)); add.forEach(id=>TNAV_CARDS.add(id));
+  if(!add.length) return;                                     // a card opened before this arrived gets its button
+  document.querySelectorAll('.item[data-id]').forEach(el=>{ const b=el.querySelector('.body'), d=BYID[el.dataset.id]; if(b && d && add.includes(d._id)) b.replaceWith(body(d)); });
+}).catch(()=>{}); })();
+function tncFor(N, id){ const c = TNC && TNC.cards[id]; return c && N && TNC.generated === N.generated ? c : null; }
 const EMPTY_FC = {type:'FeatureCollection', features:[]};
 function loadTnet(){
   if(TNET) return Promise.resolve(TNET);
@@ -1928,8 +1942,16 @@ function tLine(N, i){
 // second -> first. Interstates, trunk highways and ramps are one road per direction; each goes the way trucks drive it.
 function tCanGo(l, from){ const ow = l[7] || 0; return !ow || (ow > 0 ? from === l[0] : from === l[1]); }
 // cheapest way from every junction to dest (Dijkstra with a binary heap); via[u] = the link to take from u
-function tTree(N, dest){
+function tTree(N, dest, cfg, id){
   const n = N.lat.length, dist = new Float64Array(n).fill(Infinity), via = new Int32Array(n).fill(-1), h = [];
+  let cost = null;                                            // v33.5: a confirmed pad - come in its confirmed way
+  if(cfg){
+    const ins = new Set(cfg.in), R = TNC.near_m || 8000, X = TNC.near_x || 8, dl = N.lat[dest], dn = N.lon[dest];
+    cost = N.links.map((l, i)=>{
+      if(l[8] || ins.has(i) || !N.names[l[2]]) return l[4];  // interstate / US / state route, confirmed, or unnamed
+      return Math.min(distM(dl, dn, N.lat[l[0]], N.lon[l[0]]), distM(dl, dn, N.lat[l[1]], N.lon[l[1]])) < R ? l[4]*X : l[4];
+    });
+  }
   const push = (c, u)=>{ h.push([c, u]); let i = h.length-1; while(i){ const p = (i-1)>>1; if(h[p][0] <= h[i][0]) break; [h[p], h[i]] = [h[i], h[p]]; i = p; } };
   const pop = ()=>{ const top = h[0], last = h.pop(); if(h.length){ h[0] = last; let i = 0;
     for(;;){ const a = 2*i+1, b = a+1; let m = i; if(a < h.length && h[a][0] < h[m][0]) m = a; if(b < h.length && h[b][0] < h[m][0]) m = b;
@@ -1937,11 +1959,11 @@ function tTree(N, dest){
   dist[dest] = 0; push(0, dest);
   while(h.length){
     const [c, u] = pop(); if(c > dist[u]) continue;
-    for(const i of N.adj[u]){ const l = N.links[i], v = l[0]===u ? l[1] : l[0], nc = c + l[4];
+    for(const i of N.adj[u]){ const l = N.links[i], v = l[0]===u ? l[1] : l[0], nc = c + (cost ? cost[i] : l[4]);
       if(!tCanGo(l, v)) continue;                              // searching back from the pad: the truck drives v -> u
       if(nc < dist[v]){ dist[v] = nc; via[v] = i; push(nc, v); } }
   }
-  return {dest, dist, via};
+  return {dest, dist, via, id: cfg ? id : null};
 }
 function pathLen(p){ let m = 0; for(let i=1; i<p.length; i++) m += distM(p[i-1][0], p[i-1][1], p[i][0], p[i][1]); return m; }
 // the route from `me` (lat, lon) to dest: join the nearest truck road at the nearest point, then head for whichever
@@ -2057,9 +2079,11 @@ function tnavShow(d, me, infoEl){
   return loadTnet().then(N=>{
     const A = APPROACHES[d._id], end = A && A.entrance ? A.entrance : (d.lat && d.lon ? [d.lat, d.lon] : null);
     if(!end) return null;
+    const cfg = tncFor(N, d._id);
     let dest = 0, bd = Infinity;
-    for(let i=0; i<N.lat.length; i++){ const x = distM(end[0], end[1], N.lat[i], N.lon[i]); if(x < bd){ bd = x; dest = i; } }
-    if(!TTREE || TTREE.dest !== dest) TTREE = tTree(N, dest);
+    if(cfg) dest = cfg.dest;                                  // where the confirmed trucks arrive
+    else for(let i=0; i<N.lat.length; i++){ const x = distM(end[0], end[1], N.lat[i], N.lon[i]); if(x < bd){ bd = x; dest = i; } }
+    if(!TTREE || TTREE.dest !== dest || TTREE.id !== (cfg ? d._id : null)) TTREE = tTree(N, dest, cfg, d._id);
     const r = tRoute(N, TTREE, me);
     if(!r) return null;
     vnStop(); tnavDraw(r, me); TNAV_ID = d._id;
